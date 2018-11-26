@@ -71,6 +71,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 #if ENABLE_RAYTRACING
         public HDRaytracingManager m_RayTracingManager = new HDRaytracingManager();
         readonly HDRaytracingReflections m_RaytracingReflections = new HDRaytracingReflections();
+        readonly HDRaytracingShadowManager m_RaytracingShadows = new HDRaytracingShadowManager();
 #endif
 
         // Renderer Bake configuration can vary depends on if shadow mask is enabled or no
@@ -336,8 +337,10 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
             m_MRTWithSSS = new RenderTargetIdentifier[2 + m_SSSBufferManager.sssBufferCount];
 #if ENABLE_RAYTRACING
-            m_RayTracingManager.Init(m_Asset.renderPipelineSettings);
+            m_RayTracingManager.Init(m_Asset.renderPipelineSettings, m_Asset.renderPipelineResources);
             m_RaytracingReflections.Init(m_Asset, m_SkyManager, m_RayTracingManager, m_SharedRTManager);
+            m_RaytracingShadows.Init(m_Asset, m_RayTracingManager, m_SharedRTManager, m_LightLoop, m_GbufferManager);
+            m_LightLoop.InitRaytracing(m_RayTracingManager);
 #endif
         }
 
@@ -583,6 +586,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             base.Dispose();
 
 #if ENABLE_RAYTRACING
+            m_RaytracingShadows.Release();
             m_RaytracingReflections.Release();
             m_RayTracingManager.Release();
 #endif
@@ -700,6 +704,10 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                     cmd.SetGlobalTexture(HDShaderIDs._SsrLightingTexture, m_SsrLightingTexture);
                 else
                     cmd.SetGlobalTexture(HDShaderIDs._SsrLightingTexture, Texture2D.blackTexture);
+
+                // Push the preintergrated textures
+                PreIntegratedFGD.instance.Bind(cmd, PreIntegratedFGD.FGDIndex.FGD_GGXAndDisneyDiffuse);
+                PreIntegratedFGD.instance.Bind(cmd, PreIntegratedFGD.FGDIndex.FGD_CharlieAndFabricLambert);
             }
         }
 
@@ -1201,8 +1209,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                             }
                         }
 
-                        // Needs the depth pyramid and motion vectors, as well as the render of the previous frame.
-                        RenderSSR(hdCamera, cmd);
+
 
                         StopStereoRendering(cmd, renderContext, hdCamera);
 
@@ -1234,6 +1241,9 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                             hdCamera.SetupGlobalParams(cmd, m_Time, m_LastTime, m_FrameCount);
                         }
 
+                        // Needs the depth pyramid and motion vectors, as well as the render of the previous frame.
+                        RenderSSR(hdCamera, cmd, renderContext);
+
                         using (new ProfilingSample(cmd, "Screen space shadows", CustomSamplerId.ScreenSpaceShadows.GetSampler()))
                         {
 
@@ -1252,6 +1262,22 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                             PushFullScreenDebugTexture(hdCamera, cmd, m_ScreenSpaceShadowsBuffer, FullScreenDebugMode.ContactShadows);
                             StopStereoRendering(cmd, renderContext, hdCamera);
                         }
+
+                        // Let's render the screen space area light shadows
+                    #if ENABLE_RAYTRACING
+                        bool shadowsRendered = m_RaytracingShadows.RenderAreaShadows(hdCamera, cmd, renderContext);
+                        if(shadowsRendered)
+                        {
+                            cmd.SetGlobalInt(HDShaderIDs._RaytracedAreaShadow, 1);
+                        }
+                        else
+                        {
+                            cmd.SetGlobalInt(HDShaderIDs._RaytracedAreaShadow, 0);
+                        }
+                        #else
+                        // If ray-tracing is not active, this is not valid
+                         cmd.SetGlobalInt(HDShaderIDs._RaytracedAreaShadow, 0);
+                        #endif
 
                         if (hdCamera.frameSettings.enableAsyncCompute)
                         {
@@ -1984,7 +2010,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             }
         }
 
-        void RenderSSR(HDCamera hdCamera, CommandBuffer cmd)
+        void RenderSSR(HDCamera hdCamera, CommandBuffer cmd, ScriptableRenderContext renderContext)
         {
             if (!hdCamera.frameSettings.enableSSR)
                 return;
@@ -1992,7 +2018,9 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 #if ENABLE_RAYTRACING
             if(m_Asset.renderPipelineSettings.supportRayTracing)
             {
-                m_RaytracingReflections.RenderReflections(hdCamera, cmd, m_SsrLightingTexture);
+                m_RaytracingReflections.RenderReflections(hdCamera, cmd, m_SsrLightingTexture, renderContext);
+                PushFullScreenDebugTexture(hdCamera, cmd, m_RaytracingReflections.m_LightCluster.m_DebugLightClusterTexture, FullScreenDebugMode.LightCluster);
+
             }
             else
 #endif

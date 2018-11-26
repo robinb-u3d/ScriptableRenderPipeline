@@ -284,7 +284,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             DrawFoldout(settings.lightType, "Shape", DrawShape);
             DrawFoldout(settings.intensity, "Light", DrawLightSettings);
 
-            if (settings.shadowsType.enumValueIndex != (int)LightShadows.None)
+            if (settings.shadowsType.enumValueIndex != (int)LightShadows.None && LightShape.Rectangle != m_LightShape)
                 DrawFoldout(settings.shadowsType, "Shadows", DrawShadows);
 
             m_SerializedAdditionalShadowData.ApplyModifiedProperties();
@@ -412,7 +412,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                     bool withYAxis = src.lightTypeExtent == LightTypeExtent.Rectangle;
                     using (new Handles.DrawingScope(Matrix4x4.TRS(light.transform.position, light.transform.rotation, Vector3.one)))
                     {
-                        Vector2 widthHeight = new Vector4(light.areaSize.x, withYAxis ? light.areaSize.y : 0f);
+                        Vector2 widthHeight = new Vector4(src.shapeWidth, withYAxis ? src.shapeHeight : 0f);
                         float range = light.range;
                         EditorGUI.BeginChangeCheck();
                         Handles.zTest = UnityEngine.Rendering.CompareFunction.Greater;
@@ -432,7 +432,15 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                         if (EditorGUI.EndChangeCheck())
                         {
                             Undo.RecordObjects(new UnityEngine.Object[] { target, src }, withYAxis ? "Adjust Area Rectangle Light" : "Adjust Area Line Light");
-                            light.areaSize = withYAxis ? widthHeight : new Vector2(widthHeight.x, light.areaSize.y);
+                            if(withYAxis)
+                            {
+                                src.shapeWidth = widthHeight.x;
+                                src.shapeHeight = widthHeight.y;
+                            }
+                            else
+                            {
+                                src.shapeWidth = widthHeight.x;
+                            }
                             light.range = range;
                         }
 
@@ -462,7 +470,11 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
 
         void DrawFeatures()
         {
+#if ENABLE_RAYTRACING
+            bool disabledScope = m_LightShape == LightShape.Line;
+#else
             bool disabledScope = m_LightShape == LightShape.Line || (m_LightShape == LightShape.Rectangle && settings.isRealtime);
+#endif
 
             using (new EditorGUI.DisabledScope(disabledScope))
             {
@@ -551,8 +563,10 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                         settings.areaSizeX.floatValue = m_AdditionalLightData.shapeWidth.floatValue;
                         settings.areaSizeY.floatValue = m_AdditionalLightData.shapeHeight.floatValue;
                     }
+                    #if !ENABLE_RAYTRACING
                     if (settings.isRealtime)
                         settings.shadowsType.enumValueIndex = (int)LightShadows.None;
+                    #endif
                     break;
 
                 case LightShape.Line:

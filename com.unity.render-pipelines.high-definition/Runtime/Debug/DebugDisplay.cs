@@ -19,6 +19,8 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         PreRefractionColorPyramid,
         DepthPyramid,
         FinalColorPyramid,
+        // Raytracing
+        LightCluster,
         MaxLightingFullScreenDebug,
 
         // Rendering
@@ -219,7 +221,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             DebugViewGbuffer debugGBuffer = (DebugViewGbuffer)materialDebugSettings.debugViewGBuffer;
             return (debugLighting == DebugLightingMode.DiffuseLighting || debugLighting == DebugLightingMode.SpecularLighting) ||
                 (debugGBuffer == DebugViewGbuffer.BakeDiffuseLightingWithAlbedoPlusEmissive) ||
-                (fullScreenDebugMode == FullScreenDebugMode.PreRefractionColorPyramid || fullScreenDebugMode == FullScreenDebugMode.FinalColorPyramid || fullScreenDebugMode == FullScreenDebugMode.ScreenSpaceReflections);
+                (fullScreenDebugMode == FullScreenDebugMode.PreRefractionColorPyramid || fullScreenDebugMode == FullScreenDebugMode.FinalColorPyramid || fullScreenDebugMode == FullScreenDebugMode.ScreenSpaceReflections || fullScreenDebugMode == FullScreenDebugMode.LightCluster);
         }
 
         void RegisterDisplayStatsDebug()
