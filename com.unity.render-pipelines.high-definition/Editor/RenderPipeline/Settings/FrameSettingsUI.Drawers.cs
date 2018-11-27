@@ -1,6 +1,4 @@
-using UnityEditor.AnimatedValues;
 using UnityEngine;
-using UnityEngine.Experimental.Rendering;
 using UnityEngine.Experimental.Rendering.HDPipeline;
 using UnityEngine.Rendering;
 
@@ -10,7 +8,9 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
 
     partial class FrameSettingsUI
     {
+#pragma warning disable 618 //CED
         internal static CED.IDrawer Inspector(bool withOverride = true)
+#pragma warning restore 618
         {
             return CED.Group(
                 CED.Action((s, d, o) =>
@@ -24,7 +24,9 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
         }
 
         //separated to add enum popup on default frame settings
+#pragma warning disable 618 //CED
         internal static CED.IDrawer InspectorInnerbox(bool withOverride = true)
+#pragma warning restore 618
         {
             return CED.Group(
                 SectionRenderingPasses(withOverride),
@@ -39,7 +41,9 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 );
         }
 
+#pragma warning disable 618 //CED
         public static CED.IDrawer SectionRenderingPasses(bool withOverride)
+#pragma warning restore 618
         {
             return CED.FoldoutGroup(
                 renderingPassesHeaderContent,
@@ -49,8 +53,10 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 CED.space
                 );
         }
-        
+
+#pragma warning disable 618 //CED
         public static CED.IDrawer SectionRenderingSettings(bool withOverride)
+#pragma warning restore 618
         {
             return CED.FoldoutGroup(
                 renderingSettingsHeaderContent,
@@ -61,7 +67,9 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 );
         }
 
+#pragma warning disable 618 //CED
         public static CED.IDrawer SectionAsyncComputeSettings(bool withOverride)
+#pragma warning restore 618
         {
             return CED.FoldoutGroup(
                 asyncComputeSettingsHeaderContent,
@@ -72,7 +80,9 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 );
         }
         
+#pragma warning disable 618 //CED
         public static CED.IDrawer SectionLightingSettings(bool withOverride)
+#pragma warning restore 618
         {
             return CED.FoldoutGroup(
                 lightSettingsHeaderContent,
@@ -113,7 +123,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 area.Add(p.enableObjectMotionVectors, objectMotionVectorsContent, () => p.overridesObjectMotionVectors, a => p.overridesObjectMotionVectors = a, () => hdrpSettings.supportMotionVectors && p.enableMotionVectors.boolValue, defaultValue: defaultFrameSettings.enableObjectMotionVectors, indent: 1);
                 area.Add(p.enableDecals, decalsContent, () => p.overridesDecals, a => p.overridesDecals = a, () => hdrpSettings.supportDecals, defaultValue: defaultFrameSettings.enableDecals);
                 area.Add(p.enableRoughRefraction, roughRefractionContent, () => p.overridesRoughRefraction, a => p.overridesRoughRefraction = a, defaultValue: defaultFrameSettings.enableRoughRefraction);
-                area.Add(p.enableDistortion, distortionContent, () => p.overridesDistortion, a => p.overridesDistortion = a, defaultValue: defaultFrameSettings.enableDistortion);
+                area.Add(p.enableDistortion, distortionContent, () => p.overridesDistortion, a => p.overridesDistortion = a, () => hdrpSettings.supportDistortion, defaultValue: defaultFrameSettings.enableDistortion);
                 area.Add(p.enablePostprocess, postprocessContent, () => p.overridesPostprocess, a => p.overridesPostprocess = a, defaultValue: defaultFrameSettings.enablePostprocess);
                 area.Draw(withOverride);
             }
@@ -175,6 +185,8 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 area.Add(p.runBuildLightListAsync, lightListAsyncContent, () => p.overrideLightListInAsync, a => p.overrideLightListInAsync = a, () => p.enableAsyncCompute.boolValue, defaultValue: defaultFrameSettings.runLightListAsync, indent: 1);
                 area.Add(p.runSSRAsync, SSRAsyncContent, () => p.overrideSSRInAsync, a => p.overrideSSRInAsync = a, () => p.enableAsyncCompute.boolValue, defaultValue: defaultFrameSettings.runSSRAsync, indent: 1);
                 area.Add(p.runSSAOAsync, SSAOAsyncContent, () => p.overrideSSAOInAsync, a => p.overrideSSAOInAsync = a, () => p.enableAsyncCompute.boolValue, defaultValue: defaultFrameSettings.runSSAOAsync, indent: 1);
+                area.Add(p.runContactShadowsAsync, contactShadowsAsyncContent, () => p.overrideContactShadowsInAsync, a => p.overrideContactShadowsInAsync = a, () => p.enableAsyncCompute.boolValue, defaultValue: defaultFrameSettings.runContactShadowsAsync, indent: 1);
+                area.Add(p.runVolumeVoxelizationAsync, volumeVoxelizationAsyncContent, () => p.overrideVolumeVoxelizationInAsync, a => p.overrideVolumeVoxelizationInAsync = a, () => p.enableAsyncCompute.boolValue, defaultValue: defaultFrameSettings.runVolumeVoxelizationAsync, indent: 1);
                 area.Draw(withOverride);
             }
         }

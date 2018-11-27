@@ -1,11 +1,11 @@
 using UnityEngine.Events;
 using UnityEditor.AnimatedValues;
+using UnityEditor.Rendering;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering.HDPipeline;
 
 namespace UnityEditor.Experimental.Rendering.HDPipeline
 {
-    using _ = CoreEditorUtils;
     using CED = CoreEditorDrawer<HDRenderPipelineUI, SerializedHDRenderPipelineAsset>;
 
     class HDRenderPipelineUI : BaseUI<SerializedHDRenderPipelineAsset>
@@ -16,6 +16,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
         static readonly GUIContent diffusionProfileSettingsContent = CoreEditorUtils.GetContent("Diffusion Profile Settings");
         //static readonly GUIContent enableShaderVariantStrippingContent = CoreEditorUtils.GetContent("Enable Shader Variant Stripping");
         static readonly GUIContent enableSRPBatcher = CoreEditorUtils.GetContent("Enable SRP Batcher (experimental)");
+        static readonly GUIContent enableVariantStrippingLog = CoreEditorUtils.GetContent("Enable Variant stripping logging");
 
         internal enum SelectedFrameSettings { Camera, BakedOrCustomReflection, RealtimeReflection };
         internal static SelectedFrameSettings selectedFrameSettings = SelectedFrameSettings.Camera;
@@ -39,18 +40,26 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             );
         }
 
+#pragma warning disable 618 //CED
         public static readonly CED.IDrawer Inspector;
+#pragma warning restore 618
 
+#pragma warning disable 618 //CED
         public static readonly CED.IDrawer SectionPrimarySettings = CED.Action(Drawer_SectionPrimarySettings);
-        
+#pragma warning restore 618
+
+#pragma warning disable 618 //CED
         public static readonly CED.IDrawer FrameSettingsSection = CED.Group(
+#pragma warning restore 618
             CED.Action((s,d,o) => {
                 EditorGUILayout.BeginVertical("box");
                 Drawer_TitleDefaultFrameSettings(s, d, o);
                 }),
             CED.FadeGroup(
                 (s, d, o, i) => s.isSectionExpandedCamera,
+#pragma warning disable 618
                 FadeOption.None,
+#pragma warning restore 618
                 CED.Select(
                     (s, d, o) => s.defaultFrameSettings,
                     (s, d, o) => d.defaultFrameSettings,
@@ -59,7 +68,9 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 ),
             CED.FadeGroup(
                 (s, d, o, i) => s.isSectionExpandedBakedOrCustomReflection,
+#pragma warning disable 618
                 FadeOption.None,
+#pragma warning restore 618
                 CED.Select(
                     (s, d, o) => s.defaultCubeReflectionFrameSettings,
                     (s, d, o) => d.defaultBakedOrCustomReflectionFrameSettings,
@@ -68,7 +79,9 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 ),
             CED.FadeGroup(
                 (s, d, o, i) => s.isSectionExpandedRealtimeReflection,
+#pragma warning disable 618
                 FadeOption.None,
+#pragma warning restore 618
                 CED.Select(
                     (s, d, o) => s.defaultPlanarReflectionFrameSettings,
                     (s, d, o) => d.defaultRealtimeReflectionFrameSettings,
@@ -111,6 +124,25 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             base.Update();
         }
 
+        static public void Init(HDRenderPipelineUI s, SerializedHDRenderPipelineAsset d, Editor o)
+        {
+            s.isSectionExpandedCamera.value = false;
+            s.isSectionExpandedBakedOrCustomReflection.value = false;
+            s.isSectionExpandedRealtimeReflection.value = false;
+            switch (selectedFrameSettings)
+            {
+                case SelectedFrameSettings.Camera:
+                    s.isSectionExpandedCamera.value = true;
+                    break;
+                case SelectedFrameSettings.BakedOrCustomReflection:
+                    s.isSectionExpandedBakedOrCustomReflection.value = true;
+                    break;
+                case SelectedFrameSettings.RealtimeReflection:
+                    s.isSectionExpandedRealtimeReflection.value = true;
+                    break;
+            }
+        }
+
         static void Drawer_TitleDefaultFrameSettings(HDRenderPipelineUI s, SerializedHDRenderPipelineAsset d, Editor o)
         {
             GUILayout.BeginHorizontal();
@@ -119,21 +151,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             selectedFrameSettings = (SelectedFrameSettings)EditorGUILayout.EnumPopup(selectedFrameSettings);
             if(EditorGUI.EndChangeCheck())
             {
-                s.isSectionExpandedCamera.value = false;
-                s.isSectionExpandedBakedOrCustomReflection.value = false;
-                s.isSectionExpandedRealtimeReflection.value = false;
-                switch(selectedFrameSettings)
-                {
-                    case SelectedFrameSettings.Camera:
-                        s.isSectionExpandedCamera.value = true;
-                        break;
-                    case SelectedFrameSettings.BakedOrCustomReflection:
-                        s.isSectionExpandedBakedOrCustomReflection.value = true;
-                        break;
-                    case SelectedFrameSettings.RealtimeReflection:
-                        s.isSectionExpandedRealtimeReflection.value = true;
-                        break;
-                }
+                Init(s, d, o);
             }
             GUILayout.EndHorizontal();
         }
@@ -147,7 +165,8 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
 
             EditorGUILayout.PropertyField(d.diffusionProfileSettings, diffusionProfileSettingsContent);
             // EditorGUILayout.PropertyField(d.allowShaderVariantStripping, enableShaderVariantStrippingContent);
-            EditorGUILayout.PropertyField(d.enableSRPBatcher, enableSRPBatcher);            
+            EditorGUILayout.PropertyField(d.enableSRPBatcher, enableSRPBatcher);
+            EditorGUILayout.PropertyField(d.enableVariantStrippingLog, enableVariantStrippingLog);
         }
     }
 }
