@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine.UIElements;
 using UnityEngine.UIElements.StyleSheets;
+using ContentDragger = UnityEditor.Experimental.UIElements.GraphView.ContentDragger;
 
 namespace UnityEditor.ShaderGraph.Drawing
 {
@@ -241,8 +242,9 @@ namespace UnityEditor.ShaderGraph.Drawing
 
             var propertyView = new BlackboardFieldPropertyView(field, m_Graph, property);
             var row = new BlackboardRow(field, propertyView);
-            row.Q<Pill>().RegisterCallback<MouseEnterEvent>(evt => OnMouseHover(evt, property));
-            row.Q<Pill>().RegisterCallback<MouseLeaveEvent>(evt => OnMouseHover(evt, property));
+            var pill = row.Q<Pill>();
+            pill.RegisterCallback<MouseEnterEvent>(evt => OnMouseHover(evt, property));
+            pill.RegisterCallback<MouseLeaveEvent>(evt => OnMouseHover(evt, property));
 
             row.userData = property;
             if (index < 0)
@@ -279,22 +281,24 @@ namespace UnityEditor.ShaderGraph.Drawing
         void OnMouseHover(EventBase evt, IShaderProperty property)
         {
             var graphView = blackboard.GetFirstAncestorOfType<MaterialGraphView>();
-            foreach (var node in graphView.nodes.ToList().OfType<MaterialNodeView>())
+            if (evt.eventTypeId == MouseEnterEvent.TypeId())
             {
-                if (node.node is PropertyNode)
+                foreach (var node in graphView.nodes.ToList().OfType<MaterialNodeView>())
                 {
-                    PropertyNode propertyNode = (PropertyNode)node.node;
-                    if (propertyNode.propertyGuid == property.guid)
+                    if (node.node is PropertyNode propertyNode)
                     {
-                        if (evt.GetEventTypeId() == MouseEnterEvent.TypeId())
+                        if (propertyNode.propertyGuid == property.guid)
                         {
                             node.AddToClassList("hovered");
                         }
-                        else
-                        {
-                            node.RemoveFromClassList("hovered");
-                        }
                     }
+                }
+            }
+            else if (evt.eventTypeId == MouseLeaveEvent.TypeId())
+            {
+                foreach (var node in graphView.nodes.ToList().OfType<MaterialNodeView>())
+                {
+                    node.RemoveFromClassList("hovered");
                 }
             }
         }

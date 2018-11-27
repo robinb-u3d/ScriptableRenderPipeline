@@ -214,7 +214,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             var propRow = blackboardProvider.GetBlackboardRow(propNode.propertyGuid);
             if (propRow != null)
             {
-                if (evt.GetEventTypeId() == MouseEnterEvent.TypeId())
+                if (evt.eventTypeId == MouseEnterEvent.TypeId())
                 {
                     propRow.AddToClassList("hovered");
                 }
