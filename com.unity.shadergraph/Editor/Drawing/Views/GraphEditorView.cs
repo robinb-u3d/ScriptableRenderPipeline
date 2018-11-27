@@ -4,12 +4,10 @@ using System.Linq;
 using UnityEngine;
 using UnityEditor.Graphing;
 using UnityEditor.ShaderGraph.Drawing.Inspector;
-using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
 
 using UnityEditor.Experimental.GraphView;
 using UnityEngine.UIElements;
-using UnityEngine.UIElements.StyleSheets;
 using Edge = UnityEditor.Experimental.GraphView.Edge;
 
 
@@ -41,7 +39,7 @@ namespace UnityEditor.ShaderGraph.Drawing
         EdgeConnectorListener m_EdgeConnectorListener;
         BlackboardProvider m_BlackboardProvider;
 
-        internal BlackboardProvider blackboardProvider
+        public BlackboardProvider blackboardProvider
         {
             get { return m_BlackboardProvider; }
         }

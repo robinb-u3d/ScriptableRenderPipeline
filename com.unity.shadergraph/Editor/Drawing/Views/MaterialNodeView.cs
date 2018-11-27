@@ -201,12 +201,12 @@ namespace UnityEditor.ShaderGraph.Drawing
 
         void OnMouseHover(EventBase evt)
         {
-            var grahView = GetFirstAncestorOfType<GraphEditorView>();
-            if(grahView == null)
+            var graphView = GetFirstAncestorOfType<GraphEditorView>();
+            if (graphView == null)
                 return;
 
-            var blackboardProvider = grahView.blackboardProvider;
-            if(blackboardProvider == null)
+            var blackboardProvider = graphView.blackboardProvider;
+            if (blackboardProvider == null)
                 return;
 
             var propNode = (PropertyNode)node;
