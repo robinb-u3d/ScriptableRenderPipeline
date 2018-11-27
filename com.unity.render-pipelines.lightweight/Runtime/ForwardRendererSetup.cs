@@ -99,7 +99,12 @@ namespace UnityEngine.Experimental.Rendering.LWRP
             bool isScaledRender = !Mathf.Approximately(cameraData.renderScale, 1.0f);
             bool isTargetTexture2DArray = baseDescriptor.dimension == TextureDimension.Tex2DArray;
             bool noAutoResolveMsaa = cameraData.msaaSamples > 1 && !SystemInfo.supportsMultisampleAutoResolve;
-            return noAutoResolveMsaa || cameraData.isSceneViewCamera || isScaledRender || cameraData.isHdrEnabled ||
+            bool isOffscreenRender = cameraData.camera.targetTexture != null && !cameraData.isSceneViewCamera;    
+
+            if (isOffscreenRender)
+                return cameraData.postProcessEnabled || cameraData.requiresOpaqueTexture;
+            else    
+                return noAutoResolveMsaa || cameraData.isSceneViewCamera || isScaledRender || cameraData.isHdrEnabled ||
                 cameraData.postProcessEnabled || cameraData.requiresOpaqueTexture || isTargetTexture2DArray || !cameraData.isDefaultViewport;
         }
 
