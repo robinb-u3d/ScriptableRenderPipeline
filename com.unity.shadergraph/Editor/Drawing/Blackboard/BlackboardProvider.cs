@@ -270,5 +270,17 @@ namespace UnityEditor.ShaderGraph.Drawing
                 node.Dirty(ModificationScope.Node);
             }
         }
+
+        List<Guid> GetUnFoldedProperties()
+        {
+            List<Guid> unFoldedProperties = new List<Guid>();
+            foreach (var propertyRow in m_PropertyRows)
+            {
+                unFoldedProperties.Add(propertyRow.Key);
+                //Debug.Log($"{propertyRow.Value.name} " + $"{propertyRow.Value.expanded}");
+            }
+
+            return unFoldedProperties;
+        }
     }
 }
