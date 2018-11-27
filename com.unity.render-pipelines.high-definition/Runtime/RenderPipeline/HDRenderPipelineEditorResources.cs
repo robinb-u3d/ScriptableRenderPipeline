@@ -7,6 +7,8 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 {
     public partial class HDRenderPipelineEditorResources : ScriptableObject
     {
+        public GameObject defaultScene;
+
         [Serializable]
         public sealed class ShaderResources
         {
