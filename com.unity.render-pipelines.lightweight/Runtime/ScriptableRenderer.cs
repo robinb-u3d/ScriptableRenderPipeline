@@ -301,8 +301,12 @@ namespace UnityEngine.Experimental.Rendering.LWRP
             {
                 desc = new RenderTextureDescriptor(camera.pixelWidth, camera.pixelHeight);
             }
-            desc.colorFormat = cameraData.isHdrEnabled ? RenderTextureFormat.DefaultHDR :
-                RenderTextureFormat.Default;
+            
+            bool useHDR32 = Application.isMobilePlatform &&
+             SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.RGB111110Float);
+            RenderTextureFormat hdrFormat = (useHDR32) ? RenderTextureFormat.RGB111110Float : RenderTextureFormat.DefaultHDR;
+            desc.colorFormat = cameraData.isHdrEnabled ? hdrFormat : RenderTextureFormat.Default;
+
             desc.enableRandomWrite = false;
             desc.sRGB = true;
             desc.width = (int)((float)desc.width * renderScale * scaler);
