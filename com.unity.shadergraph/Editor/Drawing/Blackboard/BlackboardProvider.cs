@@ -5,8 +5,6 @@ using UnityEditor.Graphing;
 using UnityEngine;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine.UIElements;
-using UnityEngine.UIElements.StyleSheets;
-using ContentDragger = UnityEditor.Experimental.UIElements.GraphView.ContentDragger;
 
 namespace UnityEditor.ShaderGraph.Drawing
 {
