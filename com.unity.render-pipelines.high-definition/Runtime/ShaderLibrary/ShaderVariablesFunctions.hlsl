@@ -40,7 +40,7 @@ float3 GetPrimaryCameraPosition()
 // Could be e.g. the position of a primary camera or a shadow-casting light.
 float3 GetCurrentViewPosition()
 {
-#if (defined(SHADERPASS) && (SHADERPASS != SHADERPASS_SHADOWS)) && (!UNITY_SINGLE_PASS_STEREO) // Can't use camera position when rendering stereo
+#if (defined(SHADERPASS) && (SHADERPASS != SHADERPASS_SHADOWS))
     return GetPrimaryCameraPosition();
 #else
     // This is a generic solution.

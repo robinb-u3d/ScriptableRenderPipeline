@@ -86,6 +86,9 @@ void LightLoop( float3 V, PositionInputs posInput, PreLightData preLightData, BS
         if (_DirectionalShadowIndex >= 0)
         {
             DirectionalLightData light = _DirectionalLightDatas[_DirectionalShadowIndex];
+#if (SHADEROPTIONS_CAMERA_RELATIVE_RENDERING != 0) && defined(USING_STEREO_MATRICES)
+            light.positionRWS += _WorldSpaceCameraPosEyeOffset;
+#endif
 
             // TODO: this will cause us to load from the normal buffer first. Does this cause a performance problem?
             // Also, the light direction is not consistent with the sun disk highlight hack, which modifies the light vector.
@@ -130,9 +133,14 @@ void LightLoop( float3 V, PositionInputs posInput, PreLightData preLightData, BS
     {
         for (i = 0; i < _DirectionalLightCount; ++i)
         {
-            if (IsMatchingLightLayer(_DirectionalLightDatas[i].lightLayers, builtinData.renderingLayers))
+            DirectionalLightData light = _DirectionalLightDatas[i];
+#if (SHADEROPTIONS_CAMERA_RELATIVE_RENDERING != 0) && defined(USING_STEREO_MATRICES)
+            light.positionRWS += _WorldSpaceCameraPosEyeOffset;
+#endif
+
+            if (IsMatchingLightLayer(light.lightLayers, builtinData.renderingLayers))
             {
-                DirectLighting lighting = EvaluateBSDF_Directional(context, V, posInput, preLightData, _DirectionalLightDatas[i], bsdfData, builtinData);
+                DirectLighting lighting = EvaluateBSDF_Directional(context, V, posInput, preLightData, light, bsdfData, builtinData);
                 AccumulateDirectLighting(lighting, aggregateLighting);
             }
         }
