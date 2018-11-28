@@ -4,32 +4,89 @@ using UnityEngine.SceneManagement;
 using UnityEditor.SceneManagement;
 using UnityEngine.Rendering;
 using UnityEngine.Experimental.Rendering.HDPipeline;
+using System;
+using System.Reflection;
+using System.Linq.Expressions;
 
 [InitializeOnLoad]
 public class HDSceneManagement : UnityEditor.AssetPostprocessor
 {
+    static Func<string, bool> s_CreateEmptySceneAsset;
+
     static HDSceneManagement()
     {
         EditorSceneManager.newSceneCreated += NewSceneCreated;
-        EditorSceneManager.sceneOpened += FillAndSave;
+        
+        var scenePathProperty = Expression.Parameter(typeof(string), "scenePath");
+        var createSceneAssetInfo = typeof(EditorSceneManager)
+            .GetMethod(
+                "CreateSceneAsset",
+                BindingFlags.NonPublic | BindingFlags.Static,
+                null,
+                CallingConventions.Any,
+                new[] { typeof(string), typeof(bool) },
+                null);
+        var createSceneAssetCall = Expression.Call(
+            createSceneAssetInfo,
+            scenePathProperty,
+            Expression.Constant(false)
+            );
+        var lambda = Expression.Lambda<Func<string, bool>>(createSceneAssetCall, scenePathProperty);
+        s_CreateEmptySceneAsset = lambda.Compile();
     }
 
     static void NewSceneCreated(Scene scene, NewSceneSetup setup, NewSceneMode mode)
     {
-        if (!(GraphicsSettings.renderPipelineAsset is HDRenderPipelineAsset))
+        if (!InHDRP())
             return; // do not interfere outside of hdrp
 
-        ClearScene(scene);
-        SceneFillerConditional(scene, (OpenSceneMode)mode);
+        if(setup == NewSceneSetup.DefaultGameObjects)
+        {
+            ClearScene(scene);
+            FillScene(scene);
+        }
     }
 
-    static void FillAndSave(Scene scene, OpenSceneMode mode)
-    {
-        if (!(GraphicsSettings.renderPipelineAsset is HDRenderPipelineAsset))
-            return; // do not interfere outside of hdrp
 
-        if (SceneFillerConditional(scene, mode))
-            EditorSceneManager.SaveScene(scene);
+    [MenuItem("File/New Empty Scene", true, 148)]
+    [MenuItem("File/New Empty Scene Additive", true, 149)]
+    [MenuItem("Assets/Create/Empty Scene", true, 200)]
+    static bool InHDRP()
+    {
+        return GraphicsSettings.renderPipelineAsset is HDRenderPipelineAsset;
+    }
+
+    [MenuItem("File/New Empty Scene", false, 148)]
+    static void CreateEmptyScene()
+    {
+        if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);
+    }
+
+    [MenuItem("File/New Empty Scene Additive", false, 149)]
+    static void CreateEmptySceneAdditive()
+    {
+        EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+    }
+
+    class DoCreateScene : UnityEditor.ProjectWindowCallback.EndNameEditAction
+    {
+        public override void Action(int instanceId, string pathName, string resourceFile)
+        {
+            if (s_CreateEmptySceneAsset(pathName))
+            {
+                UnityEngine.Object sceneAsset = AssetDatabase.LoadAssetAtPath(pathName, typeof(SceneAsset));
+                ProjectWindowUtil.ShowCreatedAsset(sceneAsset);
+            }
+        }
+    }
+
+    [MenuItem("Assets/Create/Empty Scene", false, 200)]
+    static void CreateEmptySceneAsset()
+    {
+        //cannot use ProjectWindowUtil.CreateScene() as it will fill the scene with Default
+        var icon = EditorGUIUtility.FindTexture("SceneAsset Icon");
+        ProjectWindowUtil.StartNameEditingIfProjectWindowExists(0, ScriptableObject.CreateInstance<DoCreateScene>(), "New Scene.unity", icon, null);
     }
 
     static void ClearScene(Scene scene)
@@ -40,33 +97,28 @@ public class HDSceneManagement : UnityEditor.AssetPostprocessor
             GameObject.DestroyImmediate(gameObjects[index]);
         }
     }
-
-    static bool SceneFillerConditional(Scene scene, OpenSceneMode mode)
+    
+    static void FillScene(Scene scene)
     {
-        //do nothing for non empty scene
-        if (scene.rootCount != 0)
-            return false;
+        HDRenderPipelineAsset hdrpAsset = (GraphicsSettings.renderPipelineAsset as HDRenderPipelineAsset);
+        if (hdrpAsset == null || hdrpAsset.Equals(null))
+            return;
 
-        if (mode == OpenSceneMode.Additive || mode == OpenSceneMode.AdditiveWithoutLoading)
-            return false;
-        
-        if(EditorUtility.DisplayDialog("Initialize empty scene", "This scene is empty. Do you want to populate it with basic content?", "Yes", "No"))
-        {
-            HDRenderPipelineEditorResources hdrpEditorResources = (GraphicsSettings.renderPipelineAsset as HDRenderPipelineAsset).renderPipelineEditorResources;
-            if (hdrpEditorResources == null)
-                Debug.LogError("Missing HDRenderPipelineEditorResources in HDRenderPipelineAsset");
-            
-            GameObject root = GameObject.Instantiate(hdrpEditorResources.defaultScene);
-            root.transform.DetachChildren();
-            GameObject.DestroyImmediate(root);
-            return true;
-        }
-        return false;
+        if (hdrpAsset.renderPipelineEditorResources == null)
+            Debug.LogError("Missing HDRenderPipelineEditorResources in HDRenderPipelineAsset");
+
+        GameObject root = GameObject.Instantiate(hdrpAsset.renderPipelineEditorResources.defaultScene);
+        SceneManager.MoveGameObjectToScene(root, scene);
+        root.transform.DetachChildren();
+        GameObject.DestroyImmediate(root);
     }
 
     //workaround while newSceneCreated event is not raised in the Project Browser
     void OnPreprocessAsset()
     {
+        if (!InHDRP())
+            return;
+
         if (assetImporter.assetPath.EndsWith(".unity"))
         {
             Scene scene = EditorSceneManager.OpenScene(assetImporter.assetPath, OpenSceneMode.Additive);
@@ -104,6 +156,7 @@ public class HDSceneManagement : UnityEditor.AssetPostprocessor
             if (isDefaultTemplate)
             {
                 ClearScene(scene);
+                FillScene(scene);
                 EditorSceneManager.SaveScene(scene);
             }
             EditorSceneManager.CloseScene(scene, true);
