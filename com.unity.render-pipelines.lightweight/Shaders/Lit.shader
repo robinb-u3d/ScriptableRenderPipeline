@@ -178,6 +178,35 @@ Shader "Lightweight Render Pipeline/Lit"
             ENDHLSL
         }
 
+        Pass
+        {
+            Name "MotionVectors"
+            Tags{"LightMode" = "MotionVectors"}
+
+            ZWrite On
+            Cull[_Cull]
+
+            HLSLPROGRAM
+            #pragma exclude_renderers d3d11_9x gles
+            #pragma target 3.0
+
+            #pragma vertex MotionVectorsVertex
+            #pragma fragment MotionVectorsFragment
+
+            // -------------------------------------
+            // Material Keywords
+            #pragma shader_feature _ALPHATEST_ON
+            #pragma shader_feature _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
+
+            //--------------------------------------
+            // GPU Instancing
+            #pragma multi_compile_instancing
+
+            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/InputSurfacePBR.hlsl"
+            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/LightweightPassMotionVectors.hlsl"
+            ENDHLSL
+        }
+
         // This pass it not used during regular rendering, only for lightmap baking.
         Pass
         {

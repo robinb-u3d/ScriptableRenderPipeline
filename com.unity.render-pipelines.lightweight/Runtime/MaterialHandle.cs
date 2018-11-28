@@ -7,6 +7,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
         Sampling,
         Blit,
         ScreenSpaceShadow,
+        CameraMotionVectors,
         Count,
     }
 }

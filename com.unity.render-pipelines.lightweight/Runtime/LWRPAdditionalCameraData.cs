@@ -34,6 +34,10 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
         [FormerlySerializedAs("requiresColorTexture"), SerializeField]
         bool m_RequiresColorTexture = false;
 
+        [Tooltip("If enabled motion vectors will render for this camera bound as _CameraMotionVectorsTexture.")]
+        [SerializeField] bool m_RequiresMotionVectorsTexture = false;
+
+
         [HideInInspector] [SerializeField] float m_Version = 2;
 
         public float version
@@ -91,6 +95,12 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
                 }
             }
             set { m_RequiresOpaqueTextureOption = (value) ? CameraOverrideOption.On : CameraOverrideOption.Off; }
+        }
+
+        public bool requiresMotionVectorsTexture
+        {
+            get { return m_RequiresMotionVectorsTexture; }
+            set { m_RequiresMotionVectorsTexture = value; }
         }
 
         public void OnBeforeSerialize()

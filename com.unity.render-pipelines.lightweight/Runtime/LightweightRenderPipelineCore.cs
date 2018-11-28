@@ -42,6 +42,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
         public bool requiresDepthTexture;
         public bool requiresOpaqueTexture;
         public Downsampling opaqueTextureDownsampling;
+        public bool requiresMotionVectorsTexture;
 
         public SortFlags defaultOpaqueSortFlags;
 
@@ -50,6 +51,42 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
         public float maxShadowDistance;
         public bool postProcessEnabled;
         public PostProcessLayer postProcessLayer;
+    }
+
+    public class MotionVectorData
+    {
+        // The only way to reliably keep track of a frame change right now is to compare the frame
+        // count Unity gives us. We need this as a single camera could be rendered several times per
+        // frame and some matrices only have to be computed once. Realistically this shouldn't
+        // happen, but you never know...
+        public int lastFrameActive;
+
+        // Always true for cameras that just got added to the pool - needed for previous matrices to
+        // avoid one-frame jumps/hiccups with temporal effects (motion blur, TAA...)
+        public bool isFirstFrame { get; set; }
+
+        public Matrix4x4 viewMatrix;
+        public Matrix4x4 projMatrix;
+        public Matrix4x4 nonJitteredProjMatrix;
+        public Matrix4x4 previousNonJitteredViewProjMatrix;
+
+        public void Reset()
+        {
+            lastFrameActive = -1;
+            isFirstFrame = true;
+        }
+
+        public Matrix4x4 viewProjMatrix
+        {
+            get { return projMatrix * viewMatrix; }
+        }
+
+        public Matrix4x4 nonJitteredViewProjMatrix
+        {
+            get { return nonJitteredProjMatrix * viewMatrix; }
+        }
+
+        //public Vector4 taaFrameRotation; - Matt: Add TAA support
     }
 
     public struct ShadowData

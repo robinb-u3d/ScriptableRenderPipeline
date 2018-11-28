@@ -23,6 +23,10 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
         {
             public static int _GlossyEnvironmentColor;
             public static int _SubtractiveShadowColor;
+            public static int _NonJitteredViewProjMatrix;
+            public static int _PrevViewProjMatrix;
+            // public static int _TaaFrameRotation; - MATT: Add TAA support
+
         }
 
         static class PerCameraBuffer
@@ -50,11 +54,16 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
         public ScriptableRenderer renderer { get; private set; }
         PipelineSettings settings { get; set; }
 
+        // Used to detect frame changes
+        uint m_FrameCount;
+        float m_LastTime, m_Time;        
+
         internal struct PipelineSettings
         {
             public bool supportsCameraDepthTexture { get; private set; }
             public bool supportsCameraOpaqueTexture { get; private set; }
             public Downsampling opaqueDownsampling { get; private set; }
+            public bool supportsCameraMotionVectorsTexture { get; private set; }            
             public bool supportsHDR { get; private set; }
             public int msaaSampleCount { get; private set; }
             public float renderScale { get; private set; }
@@ -128,7 +137,10 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
 
             PerCameraBuffer._InvCameraViewProj = Shader.PropertyToID("_InvCameraViewProj");
             PerCameraBuffer._ScaledScreenParams = Shader.PropertyToID("_ScaledScreenParams");
-            
+            PerCameraBuffer._NonJitteredViewProjMatrix = Shader.PropertyToID("_NonJitteredViewProjMatrix");
+            PerCameraBuffer._PrevViewProjMatrix = Shader.PropertyToID("_PrevViewProjMatrix");
+            //PerCameraBuffer._TaaFrameRotation = Shader.PropertyToID("_TaaFrameRotation"); - MATT: Add TAA support
+
             // Let engine know we have MSAA on for cases where we support MSAA backbuffer
             if (QualitySettings.antiAliasing != settings.msaaSampleCount)
                 QualitySettings.antiAliasing = settings.msaaSampleCount;
@@ -151,12 +163,45 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
             renderer.Dispose();
 
             Lightmapping.ResetDelegate();
+
+            ClearAllMotionVectorData();
         }
 
         public override void Render(ScriptableRenderContext renderContext, Camera[] cameras)
         {
             base.Render(renderContext, cameras);
             BeginFrameRendering(cameras);
+
+            {
+                // SRP.Render() can be called several times per frame.
+                // Also, most Time variables do not consistently update in the Scene View.
+                // This makes reliable detection of the start of the new frame VERY hard.
+                // One of the exceptions is 'Time.realtimeSinceStartup'.
+                // Therefore, outside of the Play Mode we update the time at 60 fps,
+                // and in the Play Mode we rely on 'Time.frameCount'.
+                float t = Time.realtimeSinceStartup;
+                uint c = (uint)Time.frameCount;
+                bool newFrame;
+                if (Application.isPlaying)
+                {
+                    newFrame = m_FrameCount != c;
+                    m_FrameCount = c;
+                }
+                else
+                {
+                    newFrame = (t - m_Time) > 0.0166f;
+                    if (newFrame)
+                        m_FrameCount++;
+                }
+                if (newFrame)
+                {
+                    CleanUnusedMotionVectorData();
+                    // Make sure both are never 0.
+                    m_LastTime = (m_Time > 0) ? m_Time : t;
+                    m_Time = t;
+                }
+            }
+
 
             GraphicsSettings.lightsUseLinearIntensity = true;
             SetupPerFrameShaderConstants();
@@ -191,7 +236,12 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
                 CameraData cameraData;
                 PipelineSettings settings = pipelineInstance.settings;
                 ScriptableRenderer renderer = pipelineInstance.renderer;
+
                 InitializeCameraData(settings, camera, out cameraData);
+
+                if(cameraData.requiresMotionVectorsTexture)
+                    UpdateMotionVectorData(cameraData);
+
                 SetupPerCameraShaderConstants(cameraData);
 
                 cullingParameters.shadowDistance = Mathf.Min(cameraData.maxShadowDistance, camera.farClipPlane);
@@ -239,13 +289,61 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
                 supportedLightmapBakeTypes = LightmapBakeType.Baked | LightmapBakeType.Mixed,
                 supportedLightmapsModes = LightmapsMode.CombinedDirectional | LightmapsMode.NonDirectional,
                 rendererSupportsLightProbeProxyVolumes = false,
-                rendererSupportsMotionVectors = false,
+                rendererSupportsMotionVectors = true,
                 rendererSupportsReceiveShadows = false,
                 rendererSupportsReflectionProbes = true
             };
             SceneViewDrawMode.SetupDrawMode();
 #endif
         }
+
+        public static void UpdateMotionVectorData(CameraData cameraData)
+        {
+            Camera camera = cameraData.camera;
+            PostProcessLayer postProcessLayer = cameraData.postProcessLayer;
+
+            // If TAA is enabled projMatrix will hold a jittered projection matrix. The original,
+            // non-jittered projection matrix can be accessed via nonJitteredProjMatrix.
+            bool taaEnabled = camera.cameraType == CameraType.Game &&
+                postProcessLayer != null && postProcessLayer.enabled &&
+                postProcessLayer.antialiasingMode == PostProcessLayer.Antialiasing.TemporalAntialiasing &&
+                postProcessLayer.temporalAntialiasing.IsSupported() &&
+                cameraData.postProcessEnabled;
+
+            var nonJitteredCameraProj = camera.projectionMatrix;
+            var cameraProj = taaEnabled
+                ? postProcessLayer.temporalAntialiasing.GetJitteredProjectionMatrix(camera)
+                : nonJitteredCameraProj;
+
+            // The actual projection matrix used in shaders is actually massaged a bit to work across all platforms
+            // (different Z value ranges etc.)
+            var gpuProj = GL.GetGPUProjectionMatrix(cameraProj, true); // Had to change this from 'false'
+            var gpuView = camera.worldToCameraMatrix;
+            var gpuNonJitteredProj = GL.GetGPUProjectionMatrix(nonJitteredCameraProj, true);
+            var gpuVP = gpuNonJitteredProj * gpuView;
+
+            MotionVectorData motionVectorData = GetMotionVectorData(camera);
+
+            // A camera could be rendered multiple times per frame, only updates the previous view proj & pos if needed
+            if (motionVectorData.lastFrameActive != Time.frameCount)
+            {
+                if (motionVectorData.isFirstFrame)
+                    motionVectorData.previousNonJitteredViewProjMatrix = gpuVP;
+                else
+                    motionVectorData.previousNonJitteredViewProjMatrix = motionVectorData.nonJitteredViewProjMatrix;
+                motionVectorData.isFirstFrame = false;
+            }
+
+            //taaFrameIndex = taaEnabled ? (uint)postProcessLayer.temporalAntialiasing.sampleIndex : 0; - MATT: Add TAA support
+            //taaFrameRotation = new Vector2(Mathf.Sin(taaFrameIndex * (0.5f * Mathf.PI)),
+            //        Mathf.Cos(taaFrameIndex * (0.5f * Mathf.PI)));
+
+            motionVectorData.viewMatrix = gpuView;
+            motionVectorData.projMatrix = gpuProj;
+            motionVectorData.nonJitteredProjMatrix = gpuNonJitteredProj;
+            motionVectorData.lastFrameActive = Time.frameCount;
+        }
+
 
         static void InitializeCameraData(PipelineSettings settings, Camera camera, out CameraData cameraData)
         {
@@ -282,6 +380,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
 
             bool anyShadowsEnabled = settings.supportsMainLightShadows || settings.supportsAdditionalLightShadows;
             cameraData.maxShadowDistance = (anyShadowsEnabled) ? settings.shadowDistance : 0.0f;
+            cameraData.requiresMotionVectorsTexture = SystemInfo.supportsMotionVectors && settings.supportsCameraMotionVectorsTexture;
 
             LWRPAdditionalCameraData additionalCameraData = camera.gameObject.GetComponent<LWRPAdditionalCameraData>();
             if (additionalCameraData != null)
@@ -289,11 +388,13 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
                 cameraData.maxShadowDistance = (additionalCameraData.renderShadows) ? cameraData.maxShadowDistance : 0.0f;
                 cameraData.requiresDepthTexture = additionalCameraData.requiresDepthTexture;
                 cameraData.requiresOpaqueTexture = additionalCameraData.requiresColorTexture;
+                cameraData.requiresMotionVectorsTexture &= additionalCameraData.requiresMotionVectorsTexture;                
             }
             else
             {
                 cameraData.requiresDepthTexture = settings.supportsCameraDepthTexture;
                 cameraData.requiresOpaqueTexture = settings.supportsCameraOpaqueTexture;
+                cameraData.requiresMotionVectorsTexture = settings.supportsCameraMotionVectorsTexture;                
             }
 
             cameraData.requiresDepthTexture |= cameraData.isSceneViewCamera || cameraData.postProcessEnabled;
@@ -461,8 +562,11 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
         static void SetupPerCameraShaderConstants(CameraData cameraData)
         {
             Camera camera = cameraData.camera;
-            float cameraWidth = (float)cameraData.camera.pixelWidth * cameraData.renderScale;
-            float cameraHeight = (float)cameraData.camera.pixelHeight * cameraData.renderScale;
+            // robinb - 4 lines came as part of the patch, not sure if they should be.
+            //float cameraWidth = (float)cameraData.camera.pixelWidth * cameraData.renderScale;
+            //float cameraHeight = (float)cameraData.camera.pixelHeight * cameraData.renderScale;
+            float cameraWidth = (float)camera.pixelWidth * cameraData.renderScale;
+            float cameraHeight = (float)camera.pixelHeight * cameraData.renderScale;            
             Shader.SetGlobalVector(PerCameraBuffer._ScaledScreenParams, new Vector4(cameraWidth, cameraHeight, 1.0f + 1.0f / cameraWidth, 1.0f + 1.0f / cameraHeight));
 
             Matrix4x4 projMatrix = GL.GetGPUProjectionMatrix(camera.projectionMatrix, false);
@@ -470,6 +574,15 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
             Matrix4x4 viewProjMatrix = projMatrix * viewMatrix;
             Matrix4x4 invViewProjMatrix = Matrix4x4.Inverse(viewProjMatrix);
             Shader.SetGlobalMatrix(PerCameraBuffer._InvCameraViewProj, invViewProjMatrix);
+
+            if (cameraData.requiresMotionVectorsTexture)
+            {
+                MotionVectorData motionVectorData = GetMotionVectorData(camera);
+
+                Shader.SetGlobalMatrix(PerCameraBuffer._NonJitteredViewProjMatrix, motionVectorData.nonJitteredViewProjMatrix);
+                Shader.SetGlobalMatrix(PerCameraBuffer._PrevViewProjMatrix, motionVectorData.previousNonJitteredViewProjMatrix);
+                //Shader.SetGlobalVector(PerCameraBuffer._TaaFrameRotation, motionVectorData.taaFrameRotation); - MATT: Add TAA support
+            }            
         }
 
         public static Lightmapping.RequestLightsDelegate lightsDelegate = (Light[] requests, NativeArray<LightDataGI> lightsOutput) =>
@@ -506,5 +619,51 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
                 lightsOutput[i] = lightData;
             }
         };
+
+        // ---------------------------------------------------------
+        // Motion Vectors
+        // ---------------------------------------------------------
+
+        static Dictionary<int, MotionVectorData> s_MotionVectorDatas = new Dictionary<int, MotionVectorData>();
+
+        static List<int> s_Cleanup = new List<int>(); // Recycled to reduce GC pressure
+
+        public static MotionVectorData GetMotionVectorData(Camera camera)
+        {
+            int instanceID = camera.GetInstanceID();
+            MotionVectorData motionVectorData;
+            if (!s_MotionVectorDatas.TryGetValue(instanceID, out motionVectorData))
+            {
+                motionVectorData = CreateMotionVectorData(instanceID);
+            }
+            return motionVectorData;
+        }
+
+        public static MotionVectorData CreateMotionVectorData(int instanceID)
+        {
+            MotionVectorData motionVectorData = new MotionVectorData();
+            s_MotionVectorDatas.Add(instanceID, motionVectorData);
+            return motionVectorData;
+        }
+
+        public static void ClearAllMotionVectorData()
+        {
+            s_MotionVectorDatas.Clear();
+            s_Cleanup.Clear();
+        }
+
+        // Look for any camera that hasn't been used in the last frame and remove them from the pool.
+        public static void CleanUnusedMotionVectorData()
+        {
+            int frameCheck = Time.frameCount - 1;
+            foreach (var kvp in s_MotionVectorDatas)
+            {
+                if (kvp.Value.lastFrameActive < frameCheck)
+                    s_Cleanup.Add(kvp.Key);
+            }
+            foreach (var cam in s_Cleanup)
+                s_MotionVectorDatas.Remove(cam);
+            s_Cleanup.Clear();
+        }        
     }
 }

@@ -18,6 +18,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
         private DrawSkyboxPass m_DrawSkyboxPass;
         private CopyDepthPass m_CopyDepthPass;
         private CopyColorPass m_CopyColorPass;
+        private MotionVectorsPass m_MotionVectorsPass;
         private RenderTransparentForwardPass m_RenderTransparentForwardPass;
         private TransparentPostProcessPass m_TransparentPostProcessPass;
         private FinalBlitPass m_FinalBlitPass;
@@ -35,6 +36,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
         private RenderTargetHandle MainLightShadowmap;
         private RenderTargetHandle AdditionalLightsShadowmap;
         private RenderTargetHandle ScreenSpaceShadowmap;
+        private RenderTargetHandle MotionVectorsTexture;
 
         [NonSerialized]
         private bool m_Initialized = false;
@@ -57,6 +59,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
             m_DrawSkyboxPass = new DrawSkyboxPass();
             m_CopyDepthPass = new CopyDepthPass();
             m_CopyColorPass = new CopyColorPass();
+            m_MotionVectorsPass = new MotionVectorsPass();
             m_RenderTransparentForwardPass = new RenderTransparentForwardPass();
             m_TransparentPostProcessPass = new TransparentPostProcessPass();
             m_FinalBlitPass = new FinalBlitPass();
@@ -75,6 +78,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
             MainLightShadowmap.Init("_MainLightShadowmapTexture");
             AdditionalLightsShadowmap.Init("_AdditionalLightsShadowmapTexture");
             ScreenSpaceShadowmap.Init("_ScreenSpaceShadowmapTexture");
+            MotionVectorsTexture.Init("_CameraMotionVectorsTexture");
 
             m_Initialized = true;
         }
@@ -186,6 +190,12 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
             {
                 m_CopyColorPass.Setup(colorHandle, OpaqueColor);
                 renderer.EnqueuePass(m_CopyColorPass);
+            }
+
+            if (renderingData.cameraData.requiresMotionVectorsTexture)
+            {
+                m_MotionVectorsPass.Setup(MotionVectorsTexture);
+                renderer.EnqueuePass(m_MotionVectorsPass);
             }
 
             m_RenderTransparentForwardPass.Setup(baseDescriptor, colorHandle, depthHandle, rendererConfiguration);

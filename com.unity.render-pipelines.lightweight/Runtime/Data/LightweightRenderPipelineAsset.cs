@@ -78,6 +78,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
         [SerializeField] bool m_RequireDepthTexture = false;
         [SerializeField] bool m_RequireOpaqueTexture = false;
         [SerializeField] Downsampling m_OpaqueDownsampling = Downsampling._2xBilinear;
+        [SerializeField] bool m_RequireMotionVectorsTexture = false;
 
         // Quality settings
         [SerializeField] bool m_SupportsHDR = false;
@@ -246,6 +247,11 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
         public Downsampling opaqueDownsampling
         {
             get { return m_OpaqueDownsampling; }
+        }
+
+        public bool supportsCameraMotionVectorsTexture
+        {
+            get { return m_RequireMotionVectorsTexture; }
         }
 
         public bool supportsHDR
@@ -448,6 +454,11 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
             get { return resources != null ? resources.samplingShader : null; }
         }
         
+        public Shader cameraMotionVectorsShader
+        {
+            get { return resources != null ? resources.cameraMotionVectorsShader : null; }
+        }
+
         public void OnBeforeSerialize()
         {
         }

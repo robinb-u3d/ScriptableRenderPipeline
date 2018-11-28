@@ -123,6 +123,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
                 CoreUtils.CreateEngineMaterial(pipelineAsset.samplingShader),
                 CoreUtils.CreateEngineMaterial(pipelineAsset.blitShader),
                 CoreUtils.CreateEngineMaterial(pipelineAsset.screenSpaceShadowShader),
+                CoreUtils.CreateEngineMaterial(pipelineAsset.cameraMotionVectorsShader),
             };
 
             postProcessingContext = new PostProcessRenderContext();

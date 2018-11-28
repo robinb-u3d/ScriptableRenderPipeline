@@ -8,6 +8,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
         [FormerlySerializedAs("CopyDepthShader"), SerializeField] Shader m_CopyDepthShader = null;
         [FormerlySerializedAs("ScreenSpaceShadowShader"), SerializeField] Shader m_ScreenSpaceShadowShader = null;
         [FormerlySerializedAs("SamplingShader"), SerializeField] Shader m_SamplingShader = null;
+        [SerializeField] Shader m_CameraMotionVectorsShader = null;
 
         public Shader blitShader
         {
@@ -27,6 +28,11 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
         public Shader samplingShader
         {
             get { return m_SamplingShader; }
+        }
+
+        public Shader cameraMotionVectorsShader
+        {
+            get { return m_CameraMotionVectorsShader; }
         }
     }
 }

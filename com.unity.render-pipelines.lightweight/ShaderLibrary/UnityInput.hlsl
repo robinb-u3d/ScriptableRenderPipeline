@@ -72,6 +72,10 @@ float4 _ZBufferParams;
 // z = unused
 // w = 1.0 if camera is ortho, 0.0 if perspective
 float4 unity_OrthoParams;
+
+// TAA Frame Index ranges from 0 to 7. This gives you two rotations per cycle.
+// { sin(taaFrame * PI/2), cos(taaFrame * PI/2), 0, 0 }
+float4 _TaaFrameRotation;
 CBUFFER_END
 
 
@@ -122,6 +126,13 @@ real4 unity_SHBr;
 real4 unity_SHBg;
 real4 unity_SHBb;
 real4 unity_SHC;
+
+// Motion vectors
+float4x4 unity_MatrixPreviousM; // Matt : Support Stereo
+//X : Use last frame positions (right now skinned meshes are the only objects that use this
+//Y : Force No Motion
+//Z : Z bias value
+float4 unity_MotionVectorsParams;
 CBUFFER_END
 
 #if defined(UNITY_STEREO_MULTIVIEW_ENABLED) || ((defined(UNITY_SINGLE_PASS_STEREO) || defined(UNITY_STEREO_INSTANCING_ENABLED)) && (defined(SHADER_API_GLCORE) || defined(SHADER_API_GLES3) || defined(SHADER_API_METAL)))
@@ -227,7 +238,6 @@ float4x4 _PrevViewProjMatrix;
 float4x4 _ViewProjMatrix;
 float4x4 _NonJitteredViewProjMatrix;
 float4x4 _ViewMatrix;
-float4x4 _ProjMatrix;
 float4x4 _InvViewProjMatrix;
 float4x4 _InvViewMatrix;
 float4x4 _InvProjMatrix;
