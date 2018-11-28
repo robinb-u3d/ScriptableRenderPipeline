@@ -1,12 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
-using UnityEditor.Graphing.Util;
 using UnityEngine;
 using UnityEditor.Graphing;
+using UnityEditor.Graphing.Util;
 using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 using UnityEngine.Rendering;
@@ -30,7 +29,7 @@ namespace UnityEditor.ShaderGraph.Drawing
         bool m_HasError;
 
         [NonSerialized]
-        public bool forceRedrawPreviews = false;
+        public bool updatePreviewShaders = false;
 
         ColorSpace m_ColorSpace;
         RenderPipelineAsset m_RenderPipelineAsset;
@@ -38,6 +37,12 @@ namespace UnityEditor.ShaderGraph.Drawing
 
         GraphEditorView m_GraphEditorView;
 
+        MessageManager m_MessageManager;
+        MessageManager messageManager
+        {
+            get { return m_MessageManager ?? (m_MessageManager = new MessageManager()); }
+        }
+        
         GraphEditorView graphEditorView
         {
             get { return m_GraphEditorView; }
@@ -56,6 +61,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                     m_GraphEditorView.convertToSubgraphRequested += ToSubGraph;
                     m_GraphEditorView.showInProjectRequested += PingAsset;
                     m_GraphEditorView.RegisterCallback<GeometryChangedEvent>(OnGeometryChanged);
+                    m_FrameAllAfterLayout = true;
                     this.rootVisualElement.Add(graphEditorView);
                 }
             }
@@ -127,7 +133,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                 if (graphEditorView == null)
                 {
                     var asset = AssetDatabase.LoadAssetAtPath<Object>(AssetDatabase.GUIDToAssetPath(selectedGuid));
-                    graphEditorView = new GraphEditorView(this, materialGraph)
+                    graphEditorView = new GraphEditorView(this, materialGraph, messageManager)
                     {
                         viewDataKey = selectedGuid,
                         assetName = asset.name.Split('/').Last()
@@ -136,12 +142,10 @@ namespace UnityEditor.ShaderGraph.Drawing
                     m_RenderPipelineAsset = GraphicsSettings.renderPipelineAsset;
                 }
 
-                if (forceRedrawPreviews)
+                if (updatePreviewShaders)
                 {
-                    // Redraw all previews
-                    foreach (INode node in m_GraphObject.graph.GetNodes<INode>())
-                        node.Dirty(ModificationScope.Node);
-                    forceRedrawPreviews = false;
+                    m_GraphEditorView.UpdatePreviewShaders();
+                    updatePreviewShaders = false;
                 }
 
                 graphEditorView.HandleGraphChanges();
@@ -242,6 +246,7 @@ namespace UnityEditor.ShaderGraph.Drawing
 
             var copyPasteGraph = new CopyPasteGraph(
                     graphView.graph.guid,
+                    graphView.selection.OfType<ShaderGroup>().Select(x => x.userData),
                     graphView.selection.OfType<MaterialNodeView>().Where(x => !(x.node is PropertyNode)).Select(x => x.node as INode),
                     graphView.selection.OfType<Edge>().Select(x => x.userData as IEdge),
                     graphView.selection.OfType<BlackboardField>().Select(x => x.userData as IShaderProperty),
@@ -423,7 +428,8 @@ namespace UnityEditor.ShaderGraph.Drawing
 
             graphObject.graph.RemoveElements(
                 graphView.selection.OfType<MaterialNodeView>().Select(x => x.node as INode),
-                Enumerable.Empty<IEdge>());
+                Enumerable.Empty<IEdge>(),
+                Enumerable.Empty<GroupData>());
             graphObject.graph.ValidateGraph();
         }
 
@@ -510,16 +516,15 @@ namespace UnityEditor.ShaderGraph.Drawing
                 graphObject = CreateInstance<GraphObject>();
                 graphObject.hideFlags = HideFlags.HideAndDontSave;
                 graphObject.graph = JsonUtility.FromJson(textGraph, graphType) as IGraph;
+                ((AbstractMaterialGraph) graphObject.graph).messageManager = messageManager;
                 graphObject.graph.OnEnable();
                 graphObject.graph.ValidateGraph();
 
-                graphEditorView = new GraphEditorView(this, m_GraphObject.graph as AbstractMaterialGraph)
+                graphEditorView = new GraphEditorView(this, m_GraphObject.graph as AbstractMaterialGraph, messageManager)
                 {
                     viewDataKey = selectedGuid,
                     assetName = asset.name.Split('/').Last()
                 };
-                m_FrameAllAfterLayout = true;
-                graphEditorView.RegisterCallback<GeometryChangedEvent>(OnGeometryChanged);
 
                 titleContent = new GUIContent(asset.name.Split('/').Last());
 
