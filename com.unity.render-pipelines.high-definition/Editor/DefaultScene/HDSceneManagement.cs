@@ -69,7 +69,7 @@ public class HDSceneManagement : UnityEditor.AssetPostprocessor
         EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
     }
 
-    class DoCreateScene : UnityEditor.ProjectWindowCallback.EndNameEditAction
+    class DoCreateEmptyScene : UnityEditor.ProjectWindowCallback.EndNameEditAction
     {
         public override void Action(int instanceId, string pathName, string resourceFile)
         {
@@ -80,13 +80,37 @@ public class HDSceneManagement : UnityEditor.AssetPostprocessor
             }
         }
     }
+    class DoCreateTemplateScene : UnityEditor.ProjectWindowCallback.EndNameEditAction
+    {
+        public override void Action(int instanceId, string pathName, string resourceFile)
+        {
+            if (s_CreateEmptySceneAsset(pathName))
+            {
+                UnityEngine.Object sceneAsset = AssetDatabase.LoadAssetAtPath(pathName, typeof(SceneAsset));
+                ProjectWindowUtil.ShowCreatedAsset(sceneAsset);
+                
+                Scene scene = EditorSceneManager.OpenScene(pathName, OpenSceneMode.Additive);
+                FillScene(scene);
+                EditorSceneManager.SaveScene(scene);
+                EditorSceneManager.CloseScene(scene, true);
+            }
+        }
+    }
 
-    [MenuItem("Assets/Create/Empty Scene", false, 200)]
+    [MenuItem("Assets/Create/Empty Scene", false, 199)]
     static void CreateEmptySceneAsset()
     {
         //cannot use ProjectWindowUtil.CreateScene() as it will fill the scene with Default
         var icon = EditorGUIUtility.FindTexture("SceneAsset Icon");
-        ProjectWindowUtil.StartNameEditingIfProjectWindowExists(0, ScriptableObject.CreateInstance<DoCreateScene>(), "New Scene.unity", icon, null);
+        ProjectWindowUtil.StartNameEditingIfProjectWindowExists(0, ScriptableObject.CreateInstance<DoCreateEmptyScene>(), "New Scene.unity", icon, null);
+    }
+
+    [MenuItem("Assets/Create/HD Template Scene", false, 200)]
+    static void CreateHDSceneAsset()
+    {
+        //cannot use ProjectWindowUtil.CreateScene() as it will fill the scene with Default
+        var icon = EditorGUIUtility.FindTexture("SceneAsset Icon");
+        ProjectWindowUtil.StartNameEditingIfProjectWindowExists(0, ScriptableObject.CreateInstance<DoCreateTemplateScene>(), "New Scene.unity", icon, null);
     }
 
     static void ClearScene(Scene scene)
@@ -105,61 +129,14 @@ public class HDSceneManagement : UnityEditor.AssetPostprocessor
             return;
 
         if (hdrpAsset.renderPipelineEditorResources == null)
+        {
             Debug.LogError("Missing HDRenderPipelineEditorResources in HDRenderPipelineAsset");
-
+            return;
+        }
+        
         GameObject root = GameObject.Instantiate(hdrpAsset.renderPipelineEditorResources.defaultScene);
         SceneManager.MoveGameObjectToScene(root, scene);
         root.transform.DetachChildren();
         GameObject.DestroyImmediate(root);
-    }
-
-    //workaround while newSceneCreated event is not raised in the Project Browser
-    void OnPreprocessAsset()
-    {
-        if (!InHDRP())
-            return;
-
-        if (assetImporter.assetPath.EndsWith(".unity"))
-        {
-            Scene scene = EditorSceneManager.OpenScene(assetImporter.assetPath, OpenSceneMode.Additive);
-            GameObject[] gameObjects = scene.GetRootGameObjects();
-
-            //hard check if its default template configuration
-            bool isDefaultTemplate = gameObjects.Length == 2;
-            if (isDefaultTemplate)
-            {
-                isDefaultTemplate &= gameObjects[0].name == "Main Camera";
-                isDefaultTemplate &= gameObjects[1].name == "Directional Light";
-            }
-            if (isDefaultTemplate)
-            {
-                Component[] cameraComponents = gameObjects[0].transform.GetComponents<Component>();
-                isDefaultTemplate &= cameraComponents.Length == 3;
-                if (isDefaultTemplate)
-                {
-                    isDefaultTemplate &= cameraComponents[0] is Transform;
-                    isDefaultTemplate &= cameraComponents[1] is Camera;
-                    isDefaultTemplate &= cameraComponents[2] is AudioListener;
-                }
-            }
-            if (isDefaultTemplate)
-            {
-                Component[] lightComponents = gameObjects[1].transform.GetComponents<Component>();
-                isDefaultTemplate &= lightComponents.Length == 2;
-                if (isDefaultTemplate)
-                {
-                    isDefaultTemplate &= lightComponents[0] is Transform;
-                    isDefaultTemplate &= lightComponents[1] is Light;
-                }
-            }
-
-            if (isDefaultTemplate)
-            {
-                ClearScene(scene);
-                FillScene(scene);
-                EditorSceneManager.SaveScene(scene);
-            }
-            EditorSceneManager.CloseScene(scene, true);
-        }
     }
 }
