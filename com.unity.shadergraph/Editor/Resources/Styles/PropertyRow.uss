@@ -2,6 +2,7 @@ PropertyRow EnumField,
 PropertyRow Label,
 PropertyRow Toggle,
 PropertyRow IntegerField,
+PropertyRow ColorField,
 PropertyRow DoubleField {
     margin-left: 0;
     margin-right: 0;
