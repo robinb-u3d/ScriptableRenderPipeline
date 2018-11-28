@@ -40,9 +40,7 @@ public class HDRP_GraphicTestRunner
             yield return null;
         }
 
-        int waitFrames = settings.waitFrames + 5;
-
-        for (int i=0 ; i<waitFrames ; ++i)
+        for (int i=0 ; i<settings.waitFrames ; ++i)
             yield return null;
 
         var settingsSG = (GameObject.FindObjectOfType<HDRP_TestSettings>() as HDRP_ShaderGraph_TestSettings);
