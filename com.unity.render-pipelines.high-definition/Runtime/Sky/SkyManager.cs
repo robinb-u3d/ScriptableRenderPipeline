@@ -50,7 +50,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
         bool                    m_UpdateRequired = false;
         bool                    m_NeedUpdateRealtimeEnv = false;
-        bool                    m_NeedUpdateBakingSky = true;
+        bool                    m_NeedUpdateStaticLightingSky = true;
 
 #if UNITY_EDITOR
         // For Preview windows we want to have a 'fixed' sky, so we can display chrome metal and have always the same look
@@ -66,11 +66,11 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         // Reflection Probe : Always used and updated depending on the OnChanged/Realtime flags.
         SkyUpdateContext    m_LightingOverrideSky = new SkyUpdateContext();
         // This is mandatory when using baked GI. This sky is used to setup the global Skybox material used by the GI system to bake sky GI.
-        SkyUpdateContext    m_BakingSky = new SkyUpdateContext();
+        SkyUpdateContext    m_StaticLightingSky = new SkyUpdateContext();
 
         // The sky rendering contexts holds the render textures used by the sky system.
-        // We need to have a separate one for the baking sky because we have to keep it alive regardless of the visual/override sky (because it's set in the lighting panel skybox material).
-        SkyRenderingContext m_BakingSkyRenderingContext;
+        // We need to have a separate one for the static lighting sky because we have to keep it alive regardless of the visual/override sky (because it's set in the lighting panel skybox material).
+        SkyRenderingContext m_StaticLightingSkyRenderingContext;
         SkyRenderingContext m_SkyRenderingContext;
 
         // This interpolation volume stack is used to interpolate the lighting override separately from the visual sky.
@@ -85,7 +85,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
         // This list will hold the sky settings that should be used for baking.
         // In practice we will always use the last one registered but we use a list to be able to roll back to the previous one once the user deletes the superfluous instances.
-        private static List<SkySettings> m_BakingSkySettings = new List<SkySettings>();
+        private static List<SkySettings> m_StaticLightingSkySettings = new List<SkySettings>();
 
 
         SkySettings GetSkySetting(VolumeStack stack)
@@ -150,7 +150,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             }
 #endif
 
-            m_BakingSky.skySettings = SkyManager.GetBakingSkySettings();
+            m_StaticLightingSky.skySettings = SkyManager.GetStaticLightingSkySettings();
 
             // Update needs to happen before testing if the component is active other internal data structure are not properly updated yet.
             VolumeManager.instance.Update(m_LightingOverrideVolumeStack, hdCamera.volumeAnchor, m_LightingOverrideLayerMask);
@@ -195,7 +195,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
         public void Build(HDRenderPipelineAsset hdAsset, IBLFilterBSDF[] iblFilterBSDFArray)
         {
-            m_BakingSkyRenderingContext = new SkyRenderingContext(iblFilterBSDFArray, (int)hdAsset.renderPipelineSettings.lightLoopSettings.skyReflectionSize, false);
+            m_StaticLightingSkyRenderingContext = new SkyRenderingContext(iblFilterBSDFArray, (int)hdAsset.renderPipelineSettings.lightLoopSettings.skyReflectionSize, false);
             m_SkyRenderingContext = new SkyRenderingContext(iblFilterBSDFArray, (int)hdAsset.renderPipelineSettings.lightLoopSettings.skyReflectionSize, true);
 
             m_StandardSkyboxMaterial = CoreUtils.CreateEngineMaterial(hdAsset.renderPipelineResources.shaders.skyboxCubemapPS);
@@ -215,11 +215,11 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             CoreUtils.Destroy(m_BlitCubemapMaterial);
             CoreUtils.Destroy(m_OpaqueAtmScatteringMaterial);
 
-            m_BakingSky.Cleanup();
+            m_StaticLightingSky.Cleanup();
             m_VisualSky.Cleanup();
             m_LightingOverrideSky.Cleanup();
 
-            m_BakingSkyRenderingContext.Cleanup();
+            m_StaticLightingSkyRenderingContext.Cleanup();
             m_SkyRenderingContext.Cleanup();
         }
 
@@ -266,11 +266,11 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
             // This is done here because we need to wait for one frame that the command buffer is executed before using the resulting textures.
             // Testing the current skybox material is because we have to make sure that additive scene loading or even some user script haven't altered it.
-            if (m_NeedUpdateBakingSky || (RenderSettings.skybox != m_StandardSkyboxMaterial))
+            if (m_NeedUpdateStaticLightingSky || (RenderSettings.skybox != m_StandardSkyboxMaterial))
             {
-                // Here we update the global SkyMaterial so that it uses our baking sky cubemap. This way, next time the GI is baked, the right sky will be present.
-                float intensity = m_BakingSky.IsValid() ? 1.0f : 0.0f; // Eliminate all diffuse if we don't have a skybox (meaning for now the background is black in HDRP)
-                m_StandardSkyboxMaterial.SetTexture("_Tex", m_BakingSkyRenderingContext.cubemapRT);
+                // Here we update the global SkyMaterial so that it uses our static lighting sky cubemap. This way, next time the GI is baked, the right sky will be present.
+                float intensity = m_StaticLightingSky.IsValid() ? 1.0f : 0.0f; // Eliminate all diffuse if we don't have a skybox (meaning for now the background is black in HDRP)
+                m_StandardSkyboxMaterial.SetTexture("_Tex", m_StaticLightingSkyRenderingContext.cubemapRT);
                 RenderSettings.skybox = m_StandardSkyboxMaterial; // Setup this material as the default to be use in RenderSettings
                 RenderSettings.ambientIntensity = intensity;
                 RenderSettings.ambientMode = AmbientMode.Skybox; // Force skybox for our HDRI
@@ -290,7 +290,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 m_NeedUpdateRealtimeEnv = false;
             }
 
-            m_NeedUpdateBakingSky = m_BakingSkyRenderingContext.UpdateEnvironment(m_BakingSky, camera, sunLight, m_UpdateRequired, cmd);
+            m_NeedUpdateStaticLightingSky = m_StaticLightingSkyRenderingContext.UpdateEnvironment(m_StaticLightingSky, camera, sunLight, m_UpdateRequired, cmd);
             SkyUpdateContext currentSky = m_LightingOverrideSky.IsValid() ? m_LightingOverrideSky : m_VisualSky;
             m_NeedUpdateRealtimeEnv = m_SkyRenderingContext.UpdateEnvironment(currentSky, camera, sunLight, m_UpdateRequired, cmd);
 
@@ -323,29 +323,29 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             }
         }
 
-        static public SkySettings GetBakingSkySettings()
+        static public SkySettings GetStaticLightingSkySettings()
         {
-            if (m_BakingSkySettings.Count == 0)
+            if (m_StaticLightingSkySettings.Count == 0)
                 return null;
             else
-                return m_BakingSkySettings[m_BakingSkySettings.Count - 1];
+                return m_StaticLightingSkySettings[m_StaticLightingSkySettings.Count - 1];
         }
 
-        static public void RegisterBakingSky(SkySettings bakingSky)
+        static public void RegisterStaticLightingSky(SkySettings staticLightingSky)
         {
-            if (!m_BakingSkySettings.Contains(bakingSky))
+            if (!m_StaticLightingSkySettings.Contains(staticLightingSky))
             {
-                if (m_BakingSkySettings.Count != 0)
+                if (m_StaticLightingSkySettings.Count != 0)
                 {
                     Debug.LogWarning("One sky component was already set for baking, only the latest one will be used.");
                 }
-                m_BakingSkySettings.Add(bakingSky);
+                m_StaticLightingSkySettings.Add(staticLightingSky);
             }
         }
 
-        static public void UnRegisterBakingSky(SkySettings bakingSky)
+        static public void UnRegisterStaticLightingSky(SkySettings staticLightingSky)
         {
-            m_BakingSkySettings.Remove(bakingSky);
+            m_StaticLightingSkySettings.Remove(staticLightingSky);
         }
 
         public Texture2D ExportSkyToTexture()
