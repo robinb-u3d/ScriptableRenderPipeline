@@ -23,10 +23,6 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
         {
             public static int _GlossyEnvironmentColor;
             public static int _SubtractiveShadowColor;
-            public static int _NonJitteredViewProjMatrix;
-            public static int _PrevViewProjMatrix;
-            // public static int _TaaFrameRotation; - MATT: Add TAA support
-
         }
 
         static class PerCameraBuffer
@@ -34,6 +30,9 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
             // TODO: This needs to account for stereo rendering
             public static int _InvCameraViewProj;
             public static int _ScaledScreenParams;
+            public static int _NonJitteredViewProjMatrix;
+            public static int _PrevViewProjMatrix;
+            // public static int _TaaFrameRotation; - MATT: Add TAA support
         }
 
         private static IRendererSetup s_DefaultRendererSetup;
@@ -56,14 +55,14 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
 
         // Used to detect frame changes
         uint m_FrameCount;
-        float m_LastTime, m_Time;        
+        float m_LastTime, m_Time;
 
         internal struct PipelineSettings
         {
             public bool supportsCameraDepthTexture { get; private set; }
             public bool supportsCameraOpaqueTexture { get; private set; }
             public Downsampling opaqueDownsampling { get; private set; }
-            public bool supportsCameraMotionVectorsTexture { get; private set; }            
+            public bool supportsCameraMotionVectorsTexture { get; private set; }
             public bool supportsHDR { get; private set; }
             public int msaaSampleCount { get; private set; }
             public float renderScale { get; private set; }
@@ -91,6 +90,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
                 cache.supportsCameraDepthTexture = asset.supportsCameraDepthTexture;
                 cache.supportsCameraOpaqueTexture = asset.supportsCameraOpaqueTexture;
                 cache.opaqueDownsampling = asset.opaqueDownsampling;
+                cache.supportsCameraMotionVectorsTexture = asset.supportsCameraMotionVectorsTexture;
 
                 // Quality settings
                 cache.msaaSampleCount = asset.msaaSampleCount;
@@ -101,7 +101,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
                 cache.mainLightRenderingMode = asset.mainLightRenderingMode;
                 cache.supportsMainLightShadows = asset.supportsMainLightShadows;
                 cache.mainLightShadowmapResolution = asset.mainLightShadowmapResolution;
-                
+
                 // Additional light settings
                 cache.additionalLightsRenderingMode = asset.additionalLightsRenderingMode;
                 cache.maxAdditionalLights = asset.maxAdditionalLightsCount;
@@ -120,7 +120,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
                 // Advanced settings
                 cache.supportsDynamicBatching = asset.supportsDynamicBatching;
                 cache.mixedLightingSupported = asset.supportsMixedLighting;
-                
+
                 return cache;
             }
         }
@@ -226,7 +226,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
                 return;
             }
 
-            ScriptableCullingParameters cullingParameters;    
+            ScriptableCullingParameters cullingParameters;
             if (!CullResults.GetCullingParameters(camera, IsStereoEnabled(camera), out cullingParameters))
                 return;
 
@@ -388,13 +388,13 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
                 cameraData.maxShadowDistance = (additionalCameraData.renderShadows) ? cameraData.maxShadowDistance : 0.0f;
                 cameraData.requiresDepthTexture = additionalCameraData.requiresDepthTexture;
                 cameraData.requiresOpaqueTexture = additionalCameraData.requiresColorTexture;
-                cameraData.requiresMotionVectorsTexture &= additionalCameraData.requiresMotionVectorsTexture;                
+                cameraData.requiresMotionVectorsTexture &= additionalCameraData.requiresMotionVectorsTexture;
             }
             else
             {
                 cameraData.requiresDepthTexture = settings.supportsCameraDepthTexture;
                 cameraData.requiresOpaqueTexture = settings.supportsCameraOpaqueTexture;
-                cameraData.requiresMotionVectorsTexture = settings.supportsCameraMotionVectorsTexture;                
+                cameraData.requiresMotionVectorsTexture = settings.supportsCameraMotionVectorsTexture;
             }
 
             cameraData.requiresDepthTexture |= cameraData.isSceneViewCamera || cameraData.postProcessEnabled;
@@ -566,7 +566,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
             //float cameraWidth = (float)cameraData.camera.pixelWidth * cameraData.renderScale;
             //float cameraHeight = (float)cameraData.camera.pixelHeight * cameraData.renderScale;
             float cameraWidth = (float)camera.pixelWidth * cameraData.renderScale;
-            float cameraHeight = (float)camera.pixelHeight * cameraData.renderScale;            
+            float cameraHeight = (float)camera.pixelHeight * cameraData.renderScale;
             Shader.SetGlobalVector(PerCameraBuffer._ScaledScreenParams, new Vector4(cameraWidth, cameraHeight, 1.0f + 1.0f / cameraWidth, 1.0f + 1.0f / cameraHeight));
 
             Matrix4x4 projMatrix = GL.GetGPUProjectionMatrix(camera.projectionMatrix, false);
@@ -582,7 +582,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
                 Shader.SetGlobalMatrix(PerCameraBuffer._NonJitteredViewProjMatrix, motionVectorData.nonJitteredViewProjMatrix);
                 Shader.SetGlobalMatrix(PerCameraBuffer._PrevViewProjMatrix, motionVectorData.previousNonJitteredViewProjMatrix);
                 //Shader.SetGlobalVector(PerCameraBuffer._TaaFrameRotation, motionVectorData.taaFrameRotation); - MATT: Add TAA support
-            }            
+            }
         }
 
         public static Lightmapping.RequestLightsDelegate lightsDelegate = (Light[] requests, NativeArray<LightDataGI> lightsOutput) =>
@@ -664,6 +664,6 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
             foreach (var cam in s_Cleanup)
                 s_MotionVectorDatas.Remove(cam);
             s_Cleanup.Clear();
-        }        
+        }
     }
 }

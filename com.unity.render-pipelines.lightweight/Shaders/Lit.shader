@@ -202,7 +202,7 @@ Shader "Lightweight Render Pipeline/Lit"
             // GPU Instancing
             #pragma multi_compile_instancing
 
-            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/InputSurfacePBR.hlsl"
+            //#include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/InputSurfacePBR.hlsl"
             #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/LightweightPassMotionVectors.hlsl"
             ENDHLSL
         }
