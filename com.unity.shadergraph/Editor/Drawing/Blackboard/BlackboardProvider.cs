@@ -20,6 +20,7 @@ namespace UnityEditor.ShaderGraph.Drawing
         Label m_PathLabel;
         TextField m_PathLabelTextField;
         bool m_EditPathCancelled = false;
+        List<MaterialNodeView> m_SelectedNodes = new List<MaterialNodeView>();
 
         //public Action onDragFinished
         //{
@@ -74,6 +75,18 @@ namespace UnityEditor.ShaderGraph.Drawing
             foreach (var property in graph.properties)
                 AddProperty(property);
             blackboard.Add(m_Section);
+        }
+
+        void OnDragUpdatedEvent(DragUpdatedEvent evt)
+        {
+            if (m_SelectedNodes.Any())
+            {
+                var graphView = blackboard.GetFirstAncestorOfType<MaterialGraphView>();
+                foreach (var node in graphView.nodes.ToList().OfType<MaterialNodeView>())
+                {
+                    node.RemoveFromClassList("hovered");
+                }
+            }
         }
 
         void OnMouseDownEvent(MouseDownEvent evt)
@@ -243,6 +256,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             var pill = row.Q<Pill>();
             pill.RegisterCallback<MouseEnterEvent>(evt => OnMouseHover(evt, property));
             pill.RegisterCallback<MouseLeaveEvent>(evt => OnMouseHover(evt, property));
+            pill.RegisterCallback<DragUpdatedEvent>(OnDragUpdatedEvent);
 
             row.userData = property;
             if (index < 0)
@@ -287,15 +301,17 @@ namespace UnityEditor.ShaderGraph.Drawing
                     {
                         if (propertyNode.propertyGuid == property.guid)
                         {
+                            m_SelectedNodes.Add(node);
                             node.AddToClassList("hovered");
                         }
                     }
                 }
             }
-            else if (evt.eventTypeId == MouseLeaveEvent.TypeId())
+            else if (evt.eventTypeId == MouseLeaveEvent.TypeId() && m_SelectedNodes.Any())
             {
                 foreach (var node in graphView.nodes.ToList().OfType<MaterialNodeView>())
                 {
+                    m_SelectedNodes.Remove(node);
                     node.RemoveFromClassList("hovered");
                 }
             }
