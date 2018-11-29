@@ -244,6 +244,10 @@ namespace UnityEditor.ShaderGraph.Drawing
             var field = new BlackboardField(icon, property.displayName, property.propertyType.ToString()) { userData = property };
             var row = new BlackboardRow(field, new BlackboardFieldPropertyView(field, m_Graph, property));
 
+            var expandButton = row.Q<Button>("expandButton");
+            //expandButton.RegisterCallback<MouseDownEvent>(evt => OnExpanded(evt, property));
+            expandButton.RegisterCallback<MouseDownEvent>(OnExpanded);
+
             row.userData = property;
             if (index < 0)
                 index = m_PropertyRows.Count;
@@ -253,6 +257,15 @@ namespace UnityEditor.ShaderGraph.Drawing
                 m_Section.Insert(index, row);
             m_PropertyRows[property.guid] = row;
 
+            try
+            {
+                Debug.Log(SessionState.GetBool(property.guid.ToString(), false));
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+
             if (create)
             {
                 row.expanded = true;
@@ -260,6 +273,23 @@ namespace UnityEditor.ShaderGraph.Drawing
                 m_Graph.AddShaderProperty(property);
                 field.OpenTextEditor();
             }
+        }
+
+        //void OnExpanded(MouseDownEvent evt, IShaderProperty property)
+        void OnExpanded(MouseDownEvent evt)
+        {
+            Debug.Log("Muppets");
+            //SessionState.SetBool(property.guid.ToString(), true);
+//            foreach (Guid unFoldedProperty in GetUnFoldedProperties())
+//            {
+//                SessionState.SetBool(unFoldedProperty.ToString(), false);
+//            }
+
+            //if (evt.button == (int)MouseButton.LeftMouse)
+            //{
+            //    Debug.Log("Muppets");
+            //}
+
         }
 
         void DirtyNodes()
@@ -271,7 +301,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             }
         }
 
-        List<Guid> GetUnFoldedProperties()
+        public List<Guid> GetUnFoldedProperties()
         {
             List<Guid> unFoldedProperties = new List<Guid>();
             foreach (var propertyRow in m_PropertyRows)
