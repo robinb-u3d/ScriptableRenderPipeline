@@ -194,7 +194,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
 
             if (renderingData.cameraData.requiresMotionVectorsTexture)
             {
-                m_MotionVectorsPass.Setup(MotionVectorsTexture);
+                m_MotionVectorsPass.Setup(MotionVectorsTexture, depthHandle);
                 renderer.EnqueuePass(m_MotionVectorsPass);
             }
 

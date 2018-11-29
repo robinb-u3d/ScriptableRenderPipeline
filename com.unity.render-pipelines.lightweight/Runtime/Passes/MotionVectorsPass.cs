@@ -14,6 +14,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
         const string k_MotionVectorTag = "Motion Vectors";
 
         private RenderTargetHandle destination { get; set; }
+        private RenderTargetHandle depth { get; set; }
 
         FilterRenderersSettings m_MotionVectorsFilterSettings;
 
@@ -35,9 +36,11 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
         /// </summary>
         /// <param name="source">Source Render Target</param>
         /// <param name="destination">Destination Render Target</param>
-        public void Setup(RenderTargetHandle destination)
+        /// <param name="depth">Depth buffer for the main scene to test against</param>
+        public void Setup(RenderTargetHandle destination, RenderTargetHandle depth)
         {
             this.destination = destination;
+            this.depth = depth;
         }
 
         /// <inheritdoc/>
@@ -57,7 +60,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
 
                 RenderTargetIdentifier motionVectorRT = destination.Identifier();
                 cmd.GetTemporaryRT(destination.id, motionVectorDesc, FilterMode.Point);
-                cmd.SetRenderTarget(motionVectorRT);
+                cmd.SetRenderTarget(motionVectorRT, depth.Identifier());
 
                 // Draw fullscreen quad
                 Material cameraMotionVectorsMaterial = renderer.GetMaterial(MaterialHandle.CameraMotionVectors);
