@@ -276,7 +276,11 @@ namespace UnityEditor.ShaderGraph.Drawing
             List<Guid> unFoldedProperties = new List<Guid>();
             foreach (var propertyRow in m_PropertyRows)
             {
-                unFoldedProperties.Add(propertyRow.Key);
+                if (propertyRow.Value.expanded)
+                {
+                    unFoldedProperties.Add(propertyRow.Key);
+                }
+
                 //Debug.Log($"{propertyRow.Value.name} " + $"{propertyRow.Value.expanded}");
             }
 
