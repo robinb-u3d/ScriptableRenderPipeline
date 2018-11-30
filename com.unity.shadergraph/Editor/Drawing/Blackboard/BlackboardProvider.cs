@@ -263,7 +263,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                Debug.LogException(e);
             }
 
             if (create)
