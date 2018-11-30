@@ -3,12 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEditor.Graphing;
 using UnityEngine;
-
-
-
 using UnityEditor.Experimental.GraphView;
 using UnityEngine.UIElements;
-using UnityEngine.UIElements.StyleSheets;
 
 namespace UnityEditor.ShaderGraph.Drawing
 {
@@ -224,7 +220,6 @@ namespace UnityEditor.ShaderGraph.Drawing
             foreach (var propertyDict in m_Graph.expandedProperties)
             {
                 SessionState.SetBool(propertyDict.Key.guid.ToString(), propertyDict.Value);
-                //SessionState.SetBool(property.guid.ToString(), m_PropertyRows[property.guid].expanded);
             }
 
             if (m_Graph.movedProperties.Any())
@@ -251,8 +246,6 @@ namespace UnityEditor.ShaderGraph.Drawing
             var row = new BlackboardRow(field, new BlackboardFieldPropertyView(field, m_Graph, property));
 
             var expandButton = row.Q<Button>("expandButton");
-            //expandButton.RegisterCallback<MouseDownEvent>(evt => OnExpanded(evt, property));
-            //expandButton.RegisterCallback<MouseOverEvent>(evt => OnExpanded(evt, property));
             expandButton.RegisterCallback<MouseDownEvent>(evt => OnExpanded(evt, property), TrickleDown.TrickleDown);
 
             row.userData = property;
@@ -266,9 +259,7 @@ namespace UnityEditor.ShaderGraph.Drawing
 
             try
             {
-                //Debug.Log(SessionState.GetBool(property.guid.ToString(), false));
                 m_PropertyRows[property.guid].expanded = SessionState.GetBool(property.guid.ToString(), false);
-                //Debug.Log("found: " + property.displayName);
             }
             catch (Exception e)
             {
@@ -284,11 +275,9 @@ namespace UnityEditor.ShaderGraph.Drawing
             }
         }
 
-        //void OnExpanded(MouseDownEvent evt, IShaderProperty property)
         void OnExpanded(MouseDownEvent evt, IShaderProperty property)
         {
             m_Graph.ShaderPropertyExpandedState(property, !m_PropertyRows[property.guid].expanded);
-            //Debug.Log(property.displayName +" is " + !m_PropertyRows[property.guid].expanded);
         }
 
         void DirtyNodes()
@@ -299,21 +288,5 @@ namespace UnityEditor.ShaderGraph.Drawing
                 node.Dirty(ModificationScope.Node);
             }
         }
-
-//        public List<Guid> GetUnFoldedProperties()
-//        {
-//            List<Guid> unFoldedProperties = new List<Guid>();
-//            foreach (var propertyRow in m_PropertyRows)
-//            {
-//                if (propertyRow.Value.expanded)
-//                {
-//                    unFoldedProperties.Add(propertyRow.Key);
-//                }
-//
-//                //Debug.Log($"{propertyRow.Value.name} " + $"{propertyRow.Value.expanded}");
-//            }
-//
-//            return unFoldedProperties;
-//        }
     }
 }
