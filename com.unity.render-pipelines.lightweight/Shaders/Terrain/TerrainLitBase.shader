@@ -82,6 +82,7 @@ Shader "Hidden/Lightweight Render Pipeline/Terrain/Lit (Base Pass)"
             #pragma vertex ShadowPassVertex
             #pragma fragment ShadowPassFragment
 
+            #define USE_LEGACY_UNITY_MATRIX_VARIABLES
             #include "TerrainLitInput.hlsl"
             #include "TerrainLitPasses.hlsl"
             ENDHLSL

@@ -126,6 +126,7 @@ Shader "Lightweight Render Pipeline/Simple Lit"
             #pragma vertex ShadowPassVertex
             #pragma fragment ShadowPassFragment
 
+            #define USE_LEGACY_UNITY_MATRIX_VARIABLES
             #include "SimpleLitInput.hlsl"
             #include "ShadowCasterPass.hlsl"
             ENDHLSL

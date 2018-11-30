@@ -17,6 +17,7 @@ Shader "Hidden/Lightweight Render Pipeline/Blit"
             #pragma vertex Vertex
             #pragma fragment Fragment
 
+            #define USE_LEGACY_UNITY_MATRIX_VARIABLES
             #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Core.hlsl"
 
             struct Attributes

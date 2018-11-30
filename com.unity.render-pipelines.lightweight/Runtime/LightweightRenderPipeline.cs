@@ -32,6 +32,9 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
             public static int _ScaledScreenParams;
             public static int _NonJitteredViewProjMatrix;
             public static int _PrevViewProjMatrix;
+
+            public static int _ViewProjMatrix;
+            public static int _ProjMatrix;
             // public static int _TaaFrameRotation; - MATT: Add TAA support
         }
 
@@ -139,6 +142,9 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
             PerCameraBuffer._ScaledScreenParams = Shader.PropertyToID("_ScaledScreenParams");
             PerCameraBuffer._NonJitteredViewProjMatrix = Shader.PropertyToID("_NonJitteredViewProjMatrix");
             PerCameraBuffer._PrevViewProjMatrix = Shader.PropertyToID("_PrevViewProjMatrix");
+
+            PerCameraBuffer._ProjMatrix = Shader.PropertyToID("_ProjMatrix");
+            PerCameraBuffer._ViewProjMatrix = Shader.PropertyToID("_ViewProjMatrix");
             //PerCameraBuffer._TaaFrameRotation = Shader.PropertyToID("_TaaFrameRotation"); - MATT: Add TAA support
 
             // Let engine know we have MSAA on for cases where we support MSAA backbuffer
@@ -317,6 +323,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
 
             // The actual projection matrix used in shaders is actually massaged a bit to work across all platforms
             // (different Z value ranges etc.)
+
             var gpuProj = GL.GetGPUProjectionMatrix(cameraProj, true); // Had to change this from 'false'
             var gpuView = camera.worldToCameraMatrix;
             var gpuNonJitteredProj = GL.GetGPUProjectionMatrix(nonJitteredCameraProj, true);
@@ -562,18 +569,18 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
         static void SetupPerCameraShaderConstants(CameraData cameraData)
         {
             Camera camera = cameraData.camera;
-            // robinb - 4 lines came as part of the patch, not sure if they should be.
-            //float cameraWidth = (float)cameraData.camera.pixelWidth * cameraData.renderScale;
-            //float cameraHeight = (float)cameraData.camera.pixelHeight * cameraData.renderScale;
             float cameraWidth = (float)camera.pixelWidth * cameraData.renderScale;
             float cameraHeight = (float)camera.pixelHeight * cameraData.renderScale;
             Shader.SetGlobalVector(PerCameraBuffer._ScaledScreenParams, new Vector4(cameraWidth, cameraHeight, 1.0f + 1.0f / cameraWidth, 1.0f + 1.0f / cameraHeight));
 
-            Matrix4x4 projMatrix = GL.GetGPUProjectionMatrix(camera.projectionMatrix, false);
+            Matrix4x4 projMatrix = GL.GetGPUProjectionMatrix(camera.projectionMatrix, true);
             Matrix4x4 viewMatrix = camera.worldToCameraMatrix;
             Matrix4x4 viewProjMatrix = projMatrix * viewMatrix;
             Matrix4x4 invViewProjMatrix = Matrix4x4.Inverse(viewProjMatrix);
             Shader.SetGlobalMatrix(PerCameraBuffer._InvCameraViewProj, invViewProjMatrix);
+
+            Shader.SetGlobalMatrix(PerCameraBuffer._ViewProjMatrix, viewProjMatrix);
+            Shader.SetGlobalMatrix(PerCameraBuffer._ProjMatrix, projMatrix);
 
             if (cameraData.requiresMotionVectorsTexture)
             {

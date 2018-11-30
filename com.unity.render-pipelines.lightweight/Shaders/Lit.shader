@@ -141,6 +141,7 @@ Shader "Lightweight Render Pipeline/Lit"
             #pragma vertex ShadowPassVertex
             #pragma fragment ShadowPassFragment
 
+            #define USE_LEGACY_UNITY_MATRIX_VARIABLES
             #include "LitInput.hlsl"
             #include "ShadowCasterPass.hlsl"
             ENDHLSL
@@ -183,7 +184,7 @@ Shader "Lightweight Render Pipeline/Lit"
             Name "MotionVectors"
             Tags{"LightMode" = "MotionVectors"}
 
-            ZWrite On
+            ZWrite Off
             Cull[_Cull]
 
             HLSLPROGRAM

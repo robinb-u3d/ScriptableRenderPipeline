@@ -94,6 +94,7 @@ Shader "Lightweight Render Pipeline/Terrain/Lit"
             #pragma multi_compile_instancing
             #pragma instancing_options assumeuniformscaling nomatrices nolightprobe nolightmap
 
+            #define USE_LEGACY_UNITY_MATRIX_VARIABLES
             #include "TerrainLitInput.hlsl"
             #include "TerrainLitPasses.hlsl"
             ENDHLSL
