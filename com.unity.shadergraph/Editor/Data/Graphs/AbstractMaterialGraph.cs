@@ -51,6 +51,14 @@ namespace UnityEditor.ShaderGraph
             get { return m_MovedProperties; }
         }
 
+        [NonSerialized]
+        Dictionary<IShaderProperty, bool> m_ExpandedProperties = new Dictionary<IShaderProperty, bool>();
+
+        public Dictionary<IShaderProperty, bool> expandedProperties
+        {
+            get { return m_ExpandedProperties; }
+        }
+
         [SerializeField]
         SerializableGuid m_GUID = new SerializableGuid();
 
@@ -241,6 +249,7 @@ namespace UnityEditor.ShaderGraph
             m_AddedProperties.Clear();
             m_RemovedProperties.Clear();
             m_MovedProperties.Clear();
+            m_ExpandedProperties.Clear();
         }
 
         public virtual void AddNode(INode node)
@@ -600,6 +609,11 @@ namespace UnityEditor.ShaderGraph
                 m_Properties.Insert(newIndex, property);
             if (!m_MovedProperties.Contains(property))
                 m_MovedProperties.Add(property);
+        }
+
+        public void ShaderPropertyExpandedState(IShaderProperty property, bool expanded)
+        {
+            m_ExpandedProperties[property] = expanded;
         }
 
         public int GetShaderPropertyIndex(IShaderProperty property)
