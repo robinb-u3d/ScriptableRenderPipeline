@@ -46,8 +46,6 @@ void ApplyBlendDiffuse(inout float4 dst, inout int matMask, float2 texCoords, fl
     matMask |= mapMask;
 }
 
-
-
 // albedoBlend is overall decal blend combined with distance fade and albedo alpha
 // decalBlend is decal blend with distance fade to be able to construct normal and mask blend if they come from mask map blue channel
 // normalBlend is calculated in this function and used later to blend the normal
@@ -214,7 +212,7 @@ DecalSurfaceData GetDecalSurfaceData(PositionInputs posInput, inout float alpha)
 #ifdef LIGHTLOOP_TILE_PASS
     GetCountAndStart(posInput, LIGHTCATEGORY_DECAL, decalStart, decalCount);
 
-    #if SCALARIZE_LIGHT_LOOP
+    #if SCALARIZE_LIGHT_LOOP && !defined(SHADER_API_METAL)
     // Fast path is when we all pixels in a wave are accessing same tile or cluster.
     uint decalStartLane0 = WaveReadLaneFirst(decalStart);
     bool fastPath = WaveActiveAllTrue(decalStart == decalStartLane0);
@@ -231,6 +229,13 @@ DecalSurfaceData GetDecalSurfaceData(PositionInputs posInput, inout float alpha)
     float3 positionRWSDdx = ddx(positionRWS);
     float3 positionRWSDdy = ddy(positionRWS);
 
+#if defined(SHADER_API_METAL)
+    for (uint i = 0; i < decalCount; i++)
+    {
+        DecalData decalData = FetchDecal(decalStart, i);
+        EvalDecalMask(posInput, positionRWSDdx, positionRWSDdy, decalData, DBuffer0, DBuffer1, DBuffer2, DBuffer3, mask, alpha);
+    }
+#else
     // Scalarized loop. All decals that are in a tile/cluster touched by any pixel in the wave are loaded (scalar load), only the ones relevant to current thread/pixel are processed.
     // For clarity, the following code will follow the convention: variables starting with s_ are wave uniform (meant for scalar register),
     // v_ are variables that might have different value for each thread in the wave (meant for vector registers).
@@ -249,7 +254,6 @@ DecalSurfaceData GetDecalSurfaceData(PositionInputs posInput, inout float alpha)
         uint s_decalIdx = v_decalIdx;
 
 #if SCALARIZE_LIGHT_LOOP
-
         if (!fastPath)
         {
             // If we are not in fast path, v_lightIdx is not scalar, so we need to query the Min value across the wave. 
@@ -264,7 +268,6 @@ DecalSurfaceData GetDecalSurfaceData(PositionInputs posInput, inout float alpha)
         // Note that the WaveReadLaneFirst should not be needed, but the compiler might insist in putting the result in VGPR.
         // However, we are certain at this point that the index is scalar.
         s_decalIdx = WaveReadLaneFirst(s_decalIdx);
-
 #endif // SCALARIZE_LIGHT_LOOP
 
         DecalData s_decalData = FetchDecal(s_decalIdx);
@@ -277,8 +280,9 @@ DecalSurfaceData GetDecalSurfaceData(PositionInputs posInput, inout float alpha)
             v_decalListOffset++;
             EvalDecalMask(posInput, positionRWSDdx, positionRWSDdy, s_decalData, DBuffer0, DBuffer1, DBuffer2, DBuffer3, mask, alpha);
         }
-
     }
+#endif
+
 #else // _SURFACE_TYPE_TRANSPARENT
     mask = UnpackByte(LOAD_TEXTURE2D(_DecalHTileTexture, posInput.positionSS / 8).r);
 #endif
