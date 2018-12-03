@@ -12,7 +12,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             var upgraders = new List<MaterialUpgrader>();
             upgraders.Add(new StandardsToHDLitMaterialUpgrader("Standard", "HDRenderPipeline/Lit"));
             upgraders.Add(new StandardsToHDLitMaterialUpgrader("Standard (Specular setup)", "HDRenderPipeline/Lit"));
-            upgraders.Add(new AutodeskInteractiveMaterialUpgrader("Autodesk Interactive", "HDRenderPipeline/Autodesk Interactive/AutodeskInteractive"));
+            upgraders.Add(new StandardsToHDLitMaterialUpgrader("Autodesk Interactive", "HDRenderPipeline/Autodesk Interactive/AutodeskInteractive"));
 
             upgraders.Add(new UnlitsToHDUnlitUpgrader("Unlit/Color", "HDRenderPipeline/Unlit"));
             upgraders.Add(new UnlitsToHDUnlitUpgrader("Unlit/Texture", "HDRenderPipeline/Unlit"));

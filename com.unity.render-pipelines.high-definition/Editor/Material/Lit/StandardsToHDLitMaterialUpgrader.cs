@@ -7,6 +7,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
     {
         static readonly string Standard = "Standard";
         static readonly string Standard_Spec = "Standard (Specular setup)";
+        static readonly string Standard_Rough = "Autodesk Interactive";
 
         public StandardsToHDLitMaterialUpgrader(string sourceShaderName, string destShaderName, MaterialFinalizer finalizer = null)
         {
@@ -52,7 +53,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             // Metallic
             bool hasMetallic = false;
             Texture metallicMap = TextureCombiner.TextureFromColor(Color.black);
-            if (srcMaterial.shader.name == Standard)
+            if ((srcMaterial.shader.name == Standard) || (srcMaterial.shader.name == Standard_Rough))
             {
                 hasMetallic = srcMaterial.GetTexture("_MetallicGlossMap") != null;
                 if (hasMetallic)
@@ -86,31 +87,42 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             Texture2D smoothnessMap = TextureCombiner.TextureFromColor(Color.white);
 
             dstMaterial.SetFloat("_SmoothnessRemapMax", srcMaterial.GetFloat("_Glossiness"));
-            
-            string smoothnessTextureChannel = "_MainTex";
 
-            if (srcMaterial.GetFloat("_SmoothnessTextureChannel") == 0)
+            if (srcMaterial.shader.name == Standard_Rough)
             {
-                if (srcMaterial.shader.name == Standard) smoothnessTextureChannel = "_MetallicGlossMap";
-                if (srcMaterial.shader.name == Standard_Spec) smoothnessTextureChannel = "_SpecGlossMap";
+                hasSmoothness = srcMaterial.GetTexture("_SpecGlossMap") != null;
+
+                if (hasSmoothness)
+                    smoothnessMap = (Texture2D)TextureCombiner.GetTextureSafe(srcMaterial, "_SpecGlossMap", Color.grey);
             }
-
-            smoothnessMap = (Texture2D)srcMaterial.GetTexture(smoothnessTextureChannel);
-            if (smoothnessMap != null)
+            else
             {
-                hasSmoothness = true;
-                    
-                dstMaterial.SetFloat("_SmoothnessRemapMax", srcMaterial.GetFloat("_GlossMapScale"));
+                string smoothnessTextureChannel = "_MainTex";
 
-                if (!TextureCombiner.TextureHasAlpha(smoothnessMap))
+                if (srcMaterial.GetFloat("_SmoothnessTextureChannel") == 0)
+                {
+                    if (srcMaterial.shader.name == Standard) smoothnessTextureChannel = "_MetallicGlossMap";
+                    if (srcMaterial.shader.name == Standard_Spec) smoothnessTextureChannel = "_SpecGlossMap";
+                }
+
+                smoothnessMap = (Texture2D)srcMaterial.GetTexture(smoothnessTextureChannel);
+                if (smoothnessMap != null)
+                {
+                    hasSmoothness = true;
+
+                    dstMaterial.SetFloat("_SmoothnessRemapMax", srcMaterial.GetFloat("_GlossMapScale"));
+
+                    if (!TextureCombiner.TextureHasAlpha(smoothnessMap))
+                    {
+                        smoothnessMap = TextureCombiner.TextureFromColor(Color.white);
+                    }
+                }
+                else
                 {
                     smoothnessMap = TextureCombiner.TextureFromColor(Color.white);
                 }
             }
-            else
-            {
-                smoothnessMap = TextureCombiner.TextureFromColor(Color.white);
-            }
+
 
             // Build the mask map
             if (hasMetallic || hasOcclusion || hasDetailMask || hasSmoothness)
@@ -121,7 +133,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                         metallicMap, 0,                                                     // R: Metallic from red
                         occlusionMap, 1,                                                    // G: Occlusion from green
                         detailMaskMap, 3,                                                   // B: Detail Mask from alpha
-                        smoothnessMap, 3 // A: Smoothness Texture from inverse greyscale for roughness setup, or alpha
+                        smoothnessMap, (srcMaterial.shader.name == Standard_Rough) ? -4 : 3 // A: Smoothness Texture from inverse greyscale for roughness setup, or alpha
                         );
 
                 string maskMapPath = AssetDatabase.GetAssetPath(srcMaterial);
