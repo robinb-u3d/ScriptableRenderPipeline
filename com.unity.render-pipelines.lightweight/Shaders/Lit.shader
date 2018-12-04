@@ -204,7 +204,7 @@ Shader "Lightweight Render Pipeline/Lit"
             #pragma multi_compile_instancing
 
             //#include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/InputSurfacePBR.hlsl"
-            #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/LightweightPassMotionVectors.hlsl"
+            #include "LightweightPassMotionVectors.hlsl"
             ENDHLSL
         }
 
