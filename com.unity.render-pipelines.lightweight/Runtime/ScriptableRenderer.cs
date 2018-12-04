@@ -193,7 +193,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
             int[] perObjectLightIndexMap = cullResults.GetLightIndexMap();
 
             int directionalLightsCount = 0;
-            int additionalLightsCount = 0;    
+            int additionalLightsCount = 0;
 
             // Disable all directional lights from the perobject light indices
             // Pipeline handles them globally.

@@ -17,6 +17,7 @@ Shader "Hidden/Lightweight Render Pipeline/CopyDepth"
             #pragma fragment frag
 
             #pragma multi_compile _DEPTH_NO_MSAA _DEPTH_MSAA_2 _DEPTH_MSAA_4
+            #define USE_LEGACY_UNITY_MATRIX_VARIABLES
 
             #include "CopyDepthPass.hlsl"
 

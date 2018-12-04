@@ -35,6 +35,8 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
 
             public static int _ViewProjMatrix;
             public static int _ProjMatrix;
+
+            public static int _ProjectionParams;
             // public static int _TaaFrameRotation; - MATT: Add TAA support
         }
 
@@ -145,6 +147,8 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
 
             PerCameraBuffer._ProjMatrix = Shader.PropertyToID("_ProjMatrix");
             PerCameraBuffer._ViewProjMatrix = Shader.PropertyToID("_ViewProjMatrix");
+            PerCameraBuffer._ProjectionParams = Shader.PropertyToID("_ProjectionParams");
+
             //PerCameraBuffer._TaaFrameRotation = Shader.PropertyToID("_TaaFrameRotation"); - MATT: Add TAA support
 
             // Let engine know we have MSAA on for cases where we support MSAA backbuffer
@@ -574,6 +578,13 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
             Shader.SetGlobalVector(PerCameraBuffer._ScaledScreenParams, new Vector4(cameraWidth, cameraHeight, 1.0f + 1.0f / cameraWidth, 1.0f + 1.0f / cameraHeight));
 
             Matrix4x4 projMatrix = GL.GetGPUProjectionMatrix(camera.projectionMatrix, true);
+
+            if (cameraData.requiresMotionVectorsTexture)
+            {
+                MotionVectorData motionVectorData = GetMotionVectorData(camera);
+                projMatrix = motionVectorData.projMatrix; // Use the possibly jittered version.
+            }
+
             Matrix4x4 viewMatrix = camera.worldToCameraMatrix;
             Matrix4x4 viewProjMatrix = projMatrix * viewMatrix;
             Matrix4x4 invViewProjMatrix = Matrix4x4.Inverse(viewProjMatrix);
@@ -581,6 +592,29 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
 
             Shader.SetGlobalMatrix(PerCameraBuffer._ViewProjMatrix, viewProjMatrix);
             Shader.SetGlobalMatrix(PerCameraBuffer._ProjMatrix, projMatrix);
+
+            float n = camera.nearClipPlane;
+            float f = camera.farClipPlane;
+
+            // Analyze the projection matrix.
+            // p[2][3] = (reverseZ ? 1 : -1) * (depth_0_1 ? 1 : 2) * (f * n) / (f - n)
+            float scale     = projMatrix[2, 3] / (f * n) * (f - n);
+            bool  depth_0_1 = Mathf.Abs(scale) < 1.5f;
+            bool  reverseZ  = scale > 0;
+            bool  flipProj  = projMatrix.inverse.MultiplyPoint(new Vector3(0, 1, 0)).y < 0;
+
+//            // http://www.humus.name/temp/Linearize%20depth.txt
+//            if (reverseZ)
+//            {
+//                zBufferParams = new Vector4(-1 + f / n, 1, -1 / f + 1 / n, 1 / f);
+//            }
+//            else
+//            {
+//                zBufferParams = new Vector4(1 - f / n, f / n, 1 / f - 1 / n, 1 / n);
+//            }
+
+            Vector4 projectionParams = new Vector4(1/*flipProj ? -1 : 1*/, n, f, 1.0f / f);
+            Shader.SetGlobalVector(PerCameraBuffer._ProjectionParams, projectionParams);
 
             if (cameraData.requiresMotionVectorsTexture)
             {

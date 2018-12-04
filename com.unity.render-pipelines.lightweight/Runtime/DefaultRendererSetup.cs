@@ -133,12 +133,10 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
                 renderer.EnqueuePass(m_ScreenSpaceShadowResolvePass);
             }
 
-            bool requiresRenderToTexture = ScriptableRenderer.RequiresIntermediateColorTexture(ref renderingData.cameraData, baseDescriptor);
 
             RenderTargetHandle colorHandle = RenderTargetHandle.CameraTarget;
             RenderTargetHandle depthHandle = RenderTargetHandle.CameraTarget;
 
-            if (requiresRenderToTexture)
             {
                 colorHandle = ColorAttachment;
                 depthHandle = DepthAttachment;
