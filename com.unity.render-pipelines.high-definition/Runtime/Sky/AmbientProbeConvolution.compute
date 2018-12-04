@@ -1,0 +1,77 @@
+#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
+#include "Packages/com.unity.render-pipelines.high-definition/Runtime/ShaderLibrary/ShaderVariables.hlsl"
+#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Sampling/Hammersley.hlsl"
+#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Sampling/Sampling.hlsl"
+
+#pragma only_renderers d3d11 ps4 xboxone vulkan metal switch
+
+#pragma kernel AmbientProbeConvolution KERNEL_SIZE=8 KERNEL_NAME=AmbientProbeConvolution
+
+RWStructuredBuffer<float>   _AmbientProbeOutputBuffer;
+TEXTURECUBE(_AmbientProbeInputCubemap);
+
+// Constants from SetSHEMapConstants function in the Stupid Spherical Harmonics Tricks paper:
+// http://www.ppsloan.org/publications/StupidSH36.pdf
+#define sqrtPI (sqrt(PI))
+#define fC0 (1.0f / (2.0f * sqrtPI))
+#define fC1 (sqrt ( 3.0f) / ( 3.0f * sqrtPI))
+#define fC2 (sqrt (15.0f) / ( 8.0f * sqrtPI))
+#define fC3 (sqrt ( 5.0f) / (16.0f * sqrtPI))
+#define fC4 (0.5f * fC2)
+
+[numthreads(1, 1, 1)]
+void KERNEL_NAME(uint2 dispatchThreadId : SV_DispatchThreadID)
+{
+    int sampleCount = 64;
+
+    for (int coeff = 0; coeff < 27; ++coeff)
+    {
+        _AmbientProbeOutputBuffer[coeff] = 0;
+    }
+
+    float weight = 4.0f * PI / (sampleCount);
+
+    for (int i = 0; i < sampleCount; ++i)
+    {
+        float2 u = Hammersley2d(i, sampleCount);
+        float3 n = SampleSphereUniform(u.x, u.y);
+
+        float2 cubeSize;
+        _AmbientProbeInputCubemap.GetDimensions(cubeSize.x, cubeSize.y);
+
+        float invOmegaP = (6.0f * cubeSize.x* cubeSize.y) / FOUR_PI;
+        float pdf = 1.0f / FOUR_PI;
+        float omegaS = rcp(sampleCount) * rcp(pdf);
+
+        // 'invOmegaP' is precomputed on CPU and provided as a parameter to the function.
+        // real omegaP = FOUR_PI / (6.0 * cubemapWidth * cubemapWidth);
+        float mipLevel = 0.5 * log2(omegaS * invOmegaP);
+
+        float4 value = SAMPLE_TEXTURECUBE_LOD(_AmbientProbeInputCubemap, s_linear_clamp_sampler, n, mipLevel);
+
+        for (int channel = 0; channel < 3; ++channel)
+        {
+            _AmbientProbeOutputBuffer[channel * 9 + 0] += (0.282095f * value[channel]);
+            _AmbientProbeOutputBuffer[channel * 9 + 1] += (-0.488603f * n.y * value[channel]);
+            _AmbientProbeOutputBuffer[channel * 9 + 2] += (0.488603f * n.z * value[channel]);
+            _AmbientProbeOutputBuffer[channel * 9 + 3] += (-0.488603f * n.x * value[channel]);
+            _AmbientProbeOutputBuffer[channel * 9 + 4] += (1.092548f * n.x * n.y * value[channel]);
+            _AmbientProbeOutputBuffer[channel * 9 + 5] += (-1.092548f * n.y * n.z * value[channel]);
+            _AmbientProbeOutputBuffer[channel * 9 + 6] += (0.315392f * (3.0f * n.z * n.z - 1.0f) * value[channel]);
+            _AmbientProbeOutputBuffer[channel * 9 + 7] += (-1.092548f * n.x * n.z * value[channel]);
+            _AmbientProbeOutputBuffer[channel * 9 + 8] += (0.546274f * (n.x * n.x - n.y * n.y) * value[channel]);
+        }
+    }
+
+    float ConvolveCosineLobeBandFactor[] = { fC0, -fC1, fC1, -fC1, fC2, -fC2, fC3, -fC2, fC4 };
+
+    for (int channel = 0; channel < 3; ++channel)
+    {
+        for (int coeff = 0; coeff < 9; ++coeff)
+        {
+            _AmbientProbeOutputBuffer[channel * 9 + coeff] *= (ConvolveCosineLobeBandFactor[coeff] * weight);
+        }
+    }
+}
+
+#undef MIN_DEPTH

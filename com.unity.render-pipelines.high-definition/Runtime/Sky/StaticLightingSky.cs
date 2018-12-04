@@ -4,15 +4,18 @@ using UnityEngine.Rendering;
 namespace UnityEngine.Experimental.Rendering.HDPipeline
 {
     [ExecuteAlways]
-    public class StaticLightingSky : MonoBehaviour
+    public class StaticLightingSky : MonoBehaviour, ISerializationCallbackReceiver
     {
         [SerializeField]
         VolumeProfile m_Profile;
         [SerializeField]
         int m_StaticLightingSkyUniqueID = 0;
+        [SerializeField]
+        float[] m_AmbientProbeCoefs = new float[3*9];
 
-        // We need to keep a reference in order to unregister it upon change.
-        SkySettings m_StaticLightingSky = null;
+        public SphericalHarmonicsL2 ambientProbe;
+
+        public SkySettings skySettings { get; private set; }
 
         List<SkySettings> m_VolumeSkyList = new List<SkySettings>();
 
@@ -44,22 +47,13 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             set
             {
                 m_StaticLightingSkyUniqueID = value;
-                UpdateCurrentStaticLighting();
+                UpdateCurrentStaticLightingSky();
             }
         }
 
-        void UpdateCurrentStaticLighting()
+        void UpdateCurrentStaticLightingSky()
         {
-            SkySettings newStaticLightingSky = GetSkyFromIDAndVolume(m_StaticLightingSkyUniqueID, m_Profile);
-
-            if (newStaticLightingSky != m_StaticLightingSky)
-            {
-                SkyManager.UnRegisterStaticLightingSky(m_StaticLightingSky);
-                if (newStaticLightingSky != null)
-                    SkyManager.RegisterStaticLightingSky(newStaticLightingSky);
-
-                m_StaticLightingSky = newStaticLightingSky;
-            }
+            skySettings = GetSkyFromIDAndVolume(m_StaticLightingSkyUniqueID, m_Profile);
         }
 
         SkySettings GetSkyFromIDAndVolume(int skyUniqueID, VolumeProfile profile)
@@ -96,26 +90,50 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
             // If we detect that the profile has changed, we need to reset the static lighting sky.
             // We have to do that manually because PropertyField won't go through setters.
-            if (profile != null && m_StaticLightingSky != null)
+            if (profile != null && skySettings != null)
             {
-                if (!profile.components.Find(x => x == m_StaticLightingSky))
+                if (!profile.components.Find(x => x == skySettings))
                 {
                     m_StaticLightingSkyUniqueID = 0;
                 }
             }
 
-            UpdateCurrentStaticLighting();
+            UpdateCurrentStaticLightingSky();
         }
 
         void OnEnable()
         {
-            UpdateCurrentStaticLighting();
+            UpdateCurrentStaticLightingSky();
+            SkyManager.RegisterStaticLightingSky(this);
         }
 
         void OnDisable()
         {
-            SkyManager.UnRegisterStaticLightingSky(m_StaticLightingSky);
-            m_StaticLightingSky = null;
+            SkyManager.UnRegisterStaticLightingSky(this);
+            skySettings = null;
         }
+
+        public void OnBeforeSerialize()
+        {
+            for (int channel = 0; channel < 3; ++channel)
+            {
+                for (int coef = 0; coef < 9; ++coef)
+                {
+                    m_AmbientProbeCoefs[channel * 9 + coef] = ambientProbe[channel, coef];
+                }
+            }
+        }
+
+        public void OnAfterDeserialize()
+        {
+            for (int channel = 0; channel < 3; ++channel)
+            {
+                for (int coef = 0; coef < 9; ++coef)
+                {
+                    ambientProbe[channel, coef] = m_AmbientProbeCoefs[channel * 9 + coef];
+                }
+            }
+        }
+
     }
 }

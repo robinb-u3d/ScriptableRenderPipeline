@@ -78,7 +78,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             }
             PropertyField(m_SkyAmbientMode, CoreEditorUtils.GetContent("Ambient Mode"));
 
-            if ( ((SkyAmbientMode)m_SkyAmbientMode.value.enumValueIndex == SkyAmbientMode.Static) && SkyManager.GetStaticLightingSkySettings() == null)
+            if ( ((SkyAmbientMode)m_SkyAmbientMode.value.enumValueIndex == SkyAmbientMode.Static) && SkyManager.GetStaticLightingSky() == null)
             {
                 EditorGUILayout.HelpBox("A Static Lighting Sky Component is required for Static Ambient Mode.", MessageType.Info);
             }
