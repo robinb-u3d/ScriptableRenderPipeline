@@ -10,7 +10,7 @@ Shader "HDRenderPipeline/AxF"
         _MaterialTilingU( "Material U Tiling", Float ) = 1
         _MaterialTilingV( "Material V Tiling", Float ) = 1
 
-        [Enum( SVBRDF, CarPaint, BTF )] _AxF_BRDFType( "_AxF_BRDFType", Int ) = 0
+        [Enum(SVBRDF, 0, CarPaint, 1, BTF, 2)] _AxF_BRDFType("_AxF_BRDFType", Float) = 0
 
         [HideInInspector] _Flags( "_Flags", Int ) = 0
 
