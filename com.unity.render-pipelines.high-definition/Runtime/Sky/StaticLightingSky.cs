@@ -4,18 +4,17 @@ using UnityEngine.Rendering;
 namespace UnityEngine.Experimental.Rendering.HDPipeline
 {
     [ExecuteAlways]
-    public class StaticLightingSky : MonoBehaviour, ISerializationCallbackReceiver
+    public class StaticLightingSky : MonoBehaviour
     {
         [SerializeField]
         VolumeProfile m_Profile;
         [SerializeField]
         int m_StaticLightingSkyUniqueID = 0;
         [SerializeField]
-        float[] m_AmbientProbeCoefs = new float[3*9];
-
-        public SphericalHarmonicsL2 ambientProbe;
+        SphericalHarmonicsL2 m_AmbientProbe;
 
         public SkySettings skySettings { get; private set; }
+        public SphericalHarmonicsL2 ambientProbe { get { return m_AmbientProbe; } set { m_AmbientProbe = value; } }
 
         List<SkySettings> m_VolumeSkyList = new List<SkySettings>();
 
@@ -112,28 +111,5 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             SkyManager.UnRegisterStaticLightingSky(this);
             skySettings = null;
         }
-
-        public void OnBeforeSerialize()
-        {
-            for (int channel = 0; channel < 3; ++channel)
-            {
-                for (int coef = 0; coef < 9; ++coef)
-                {
-                    m_AmbientProbeCoefs[channel * 9 + coef] = ambientProbe[channel, coef];
-                }
-            }
-        }
-
-        public void OnAfterDeserialize()
-        {
-            for (int channel = 0; channel < 3; ++channel)
-            {
-                for (int coef = 0; coef < 9; ++coef)
-                {
-                    ambientProbe[channel, coef] = m_AmbientProbeCoefs[channel * 9 + coef];
-                }
-            }
-        }
-
     }
 }
