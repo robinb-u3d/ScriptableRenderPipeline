@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - The `Color` node control is now a consistent width.
 - Function declarations no longer contain double delimiters.
 - The `Slider` node control now functions correctly.
-- The visual styling of various graph elements have been reverted to previous correct state.
+- Reverted the visual styling of various graph elements to their previous correct states.
 
 ## [5.2.0] - 2018-11-27
 ### Added
