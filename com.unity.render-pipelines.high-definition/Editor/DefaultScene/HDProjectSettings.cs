@@ -1,8 +1,7 @@
 using UnityEngine;
-using UnityEditor;
-using System;
 using UnityEditorInternal;
 using System.IO;
+using UnityEngine.Rendering;
 
 namespace UnityEditor.Experimental.Rendering.HDPipeline
 {
@@ -41,10 +40,29 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
         [SerializeField]
         string m_DefaultVolumeRenderingSettingsPath;
         [SerializeField]
-        string m_DefaultPostProcessSettingsPath;
+        string m_ProjectSettingFolderPath = "HDRPProjectSettings";
+        [SerializeField]
+        bool m_PopupAtStart = true;
 
-        public string defaultVolumeRenderingSettingsPath { get => instance.m_DefaultVolumeRenderingSettingsPath; set => instance.m_DefaultVolumeRenderingSettingsPath = value; }
-        public string defaultPostProcessSettingsPath { get => instance.m_DefaultPostProcessSettingsPath; set => instance.m_DefaultPostProcessSettingsPath = value; }
+        static VolumeProfile m_DefaultVolumeProfile;
+
+        public static VolumeProfile defaultVolumeProfile
+        {
+            get => m_DefaultVolumeProfile ?? (m_DefaultVolumeProfile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(instance.m_DefaultVolumeRenderingSettingsPath));
+            set => instance.m_DefaultVolumeRenderingSettingsPath = AssetDatabase.GetAssetPath(m_DefaultVolumeProfile = value);
+        }
+
+        public static string projectSettingsFolderPath
+        {
+            get => instance.m_ProjectSettingFolderPath;
+            set => instance.m_ProjectSettingFolderPath = value;
+        }
+
+        public static bool haveStartPopup
+        {
+            get => instance.m_PopupAtStart;
+            set => instance.m_PopupAtStart = value;
+        }
 
         //singleton pattern
         static HDProjectSettings s_Instance;
@@ -53,8 +71,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
         {
             s_Instance = this;
         }
-
-        //Save & load
+        
         static HDProjectSettings CreateOrLoad()
         {
             //try load
