@@ -49,19 +49,31 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
         public static VolumeProfile defaultVolumeProfile
         {
             get => m_DefaultVolumeProfile ?? (m_DefaultVolumeProfile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(instance.m_DefaultVolumeRenderingSettingsPath));
-            set => instance.m_DefaultVolumeRenderingSettingsPath = AssetDatabase.GetAssetPath(m_DefaultVolumeProfile = value);
+            set
+            {
+                instance.m_DefaultVolumeRenderingSettingsPath = AssetDatabase.GetAssetPath(m_DefaultVolumeProfile = value);
+                Save();
+            }
         }
 
         public static string projectSettingsFolderPath
         {
             get => instance.m_ProjectSettingFolderPath;
-            set => instance.m_ProjectSettingFolderPath = value;
+            set
+            {
+                instance.m_ProjectSettingFolderPath = value;
+                Save();
+            }
         }
 
         public static bool haveStartPopup
         {
             get => instance.m_PopupAtStart;
-            set => instance.m_PopupAtStart = value;
+            set
+            {
+                instance.m_PopupAtStart = value;
+                Save();
+            }
         }
 
         //singleton pattern
@@ -88,7 +100,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             return s_Instance;
         }
 
-        public static void Save(bool saveAsText = true)
+        static void Save()
         {
             if (s_Instance == null)
             {
@@ -100,7 +112,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             if (!Directory.Exists(folderPath))
                 Directory.CreateDirectory(folderPath);
 
-            InternalEditorUtility.SaveToSerializedFileAndForget(new[] { s_Instance }, filePath, saveAsText);
+            InternalEditorUtility.SaveToSerializedFileAndForget(new[] { s_Instance }, filePath, allowTextSerialization: true);
         }
     }
 }
