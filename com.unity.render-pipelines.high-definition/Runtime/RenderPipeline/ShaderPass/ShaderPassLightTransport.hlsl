@@ -17,7 +17,7 @@ CBUFFER_END
 float unity_OneOverOutputBoost;
 float unity_MaxOutputValue;
 
-#include "VertMesh.hlsl"
+#include "Packages/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/ShaderPass/VertMesh.hlsl"
 
 PackedVaryingsToPS Vert(AttributesMesh inputMesh)
 {
@@ -27,7 +27,7 @@ PackedVaryingsToPS Vert(AttributesMesh inputMesh)
     UNITY_TRANSFER_INSTANCE_ID(inputMesh, output.vmesh);
 
     // Output UV coordinate in vertex shader
-    float2 uv;
+    float2 uv = float2(0.0, 0.0);
 
     if (unity_MetaVertexControl.x)
     {

@@ -186,8 +186,8 @@ MonoBehaviour:
     serializedVersion: 2
     x: -150
     y: -425
-    width: 5986
-    height: 2094
+    width: 5978
+    height: 2092
 --- !u!114 &114350483966674976
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -928,7 +928,7 @@ VisualEffectResource:
       indirectBuffer;\t\n\t\t#endif\t\n\t\t\n\t\t#if USE_DEAD_LIST_COUNT\n\t\tByteAddressBuffer
       deadListCount;\n\t\t#endif\n\t\t\n\t\tCBUFFER_START(outputParams)\n\t\t\tfloat
       nbMax;\n\t\t\tfloat systemSeed;\n\t\tCBUFFER_END\n\t\t\n\t\tENDHLSL\n\t\t\n\n\t\t\n\t\t\n\t\t//
-      Forward pass\n\t\tPass\n\t\t{\t\t\n\t\t\tTags { \"LightMode\"=\"Forward\" }\n\t\t\t\t\t\n\t\t\tHLSLPROGRAM\n\t\t\t#pragma
+      Forward pass\n\t\tPass\n\t\t{\t\t\n\t\t\tTags { \"LightMode\"=\"ForwardOnly\"}\n\t\t\t\t\t\n\t\t\tHLSLPROGRAM\n\t\t\t#pragma
       target 4.5\n\t\t\t\n\t\t\t#define UNITY_MATERIAL_LIT\n\t\t\t#define LIGHTLOOP_TILE_PASS\n\t\t\t#define
       _ENABLE_FOG_ON_TRANSPARENT\n\t\t\t#define _DISABLE_DECALS\n\t\t\t#define _BLENDMODE_ALPHA\n\t\t\t#define
       _SURFACE_TYPE_TRANSPARENT\n\t\t\t\n\n\t\t\t#pragma multi_compile USE_FPTL_LIGHTLIST
@@ -987,35 +987,35 @@ VisualEffectResource:
       Random:Off channels:XYZ */\n\t\t\t{\n\t\t\t    color = Color;\n\t\t\t}\n\t\t\t\n\n\t\t\t\n\t\t\t#pragma
       vertex vert\n\t\t\tVFX_VARYING_PS_INPUTS vert(uint id : SV_VertexID, uint instanceID
       : SV_InstanceID)\n\t\t\t{\n\t\t\t\tuint index = (id >> 2) + instanceID * 2048;\n\t\t\t\tVFX_VARYING_PS_INPUTS
-      o = (VFX_VARYING_PS_INPUTS)0;\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#if VFX_HAS_INDIRECT_DRAW\n\t\t\t\t\t\t#if
-      USE_DEAD_LIST_COUNT\n\t\t\t\t\t\t\tif (index >= asuint(nbMax) - deadListCount.Load(0))\n\t\t\t\t\t\t\t\treturn
-      o;\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\t\t\t\tindex = indirectBuffer[index];\n\t\t\t\t\t\t\tfloat
-      lifetime = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\t\tfloat3
-      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\t\tfloat3
-      color = float3(1,1,1);\n\t\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\t\tbool
-      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\tfloat3
-      axisX = float3(1,0,0);\n\t\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\t\tfloat3
-      axisZ = float3(0,0,1);\n\t\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\t\tfloat
-      angleY = (float)0;\n\t\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotX = (float)0;\n\t\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotZ = (float)0;\n\t\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\t\tfloat
-      scaleX = (float)1;\n\t\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\t\tfloat
-      scaleZ = (float)1;\n\t\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
-      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#else\n\t\t\t\t\t\t\tif
-      (index >= asuint(nbMax))\n\t\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\tbool
-      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t\tif
-      (!alive)\n\t\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\tfloat lifetime
-      = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\t\tfloat3
-      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\t\tfloat3
-      color = float3(1,1,1);\n\t\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\t\tfloat3
-      axisX = float3(1,0,0);\n\t\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\t\tfloat3
-      axisZ = float3(0,0,1);\n\t\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\t\tfloat
-      angleY = (float)0;\n\t\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotX = (float)0;\n\t\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotZ = (float)0;\n\t\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\t\tfloat
-      scaleX = (float)1;\n\t\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\t\tfloat
-      scaleZ = (float)1;\n\t\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
-      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\tOrient_0(
+      o = (VFX_VARYING_PS_INPUTS)0;\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\tuint deadCount
+      = 0;\n\t\t\t\t\t\t#if USE_DEAD_LIST_COUNT\n\t\t\t\t\t\tdeadCount = deadListCount.Load(0);\n\t\t\t\t\t\t#endif\t\n\t\t\t\t\t\tif
+      (index >= asuint(nbMax) - deadCount)\n\t\t\t\t\t\t\treturn o; // cull\n\t\t\t\t\t\t\n\t\t\t\t\t\t#if
+      VFX_HAS_INDIRECT_DRAW\n\t\t\t\t\t\tindex = indirectBuffer[index];\n\t\t\t\t\t\tfloat
+      lifetime = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\tfloat3
+      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\tfloat3
+      color = float3(1,1,1);\n\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\tbool
+      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\tfloat3
+      axisX = float3(1,0,0);\n\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\tfloat3
+      axisZ = float3(0,0,1);\n\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\tfloat
+      angleY = (float)0;\n\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\tfloat
+      pivotX = (float)0;\n\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\tfloat
+      pivotZ = (float)0;\n\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\tfloat
+      scaleX = (float)1;\n\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\tfloat
+      scaleZ = (float)1;\n\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
+      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#else\n\t\t\t\t\t\tbool
+      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\tif
+      (!alive)\n\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tfloat lifetime
+      = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\tfloat3
+      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\tfloat3
+      color = float3(1,1,1);\n\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\tfloat3
+      axisX = float3(1,0,0);\n\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\tfloat3
+      axisZ = float3(0,0,1);\n\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\tfloat
+      angleY = (float)0;\n\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\tfloat
+      pivotX = (float)0;\n\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\tfloat
+      pivotZ = (float)0;\n\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\tfloat
+      scaleX = (float)1;\n\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\tfloat
+      scaleZ = (float)1;\n\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
+      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\tOrient_0(
       /*inout */axisX,  /*inout */axisY,  /*inout */axisZ);\n\t\t\t\t{\n\t\t\t\t    float
       tmp_y = age / lifetime;\n\t\t\t\t    float tmp_z = SampleCurve(uniform_c,tmp_y);\n\t\t\t\t
       \   float tmp_ba = uniform_b * tmp_z;\n\t\t\t\t    float tmp_bb = tmp_ba * uniform_d;\n\t\t\t\t
@@ -1080,9 +1080,8 @@ VisualEffectResource:
       posRWS = VFXGetPositionRWS(i);\n\t\t\t\tfloat4 posSS = i.VFX_VARYING_POSCS;\n\t\t\t\tPositionInputs
       posInput = GetPositionInput(posSS.xy, _ScreenSize.zw, posSS.z, posSS.w, posRWS,
       tileIndex);\n\t\t\t\t\n\t\t\t\tfloat alpha;\n\t\t\t\tsurfaceData = VFXGetSurfaceData(i,normalWS,uvData,diffusionProfile,alpha);\t\n\t\t\t\tbsdfData
-      = ConvertSurfaceDataToBSDFData(posSS.xy, surfaceData);\n\t\t\t\n\t\t\t#if HDRP_MATERIAL_TYPE_SIMPLE\n\t\t\t\tpreLightData
-      = SimpleGetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t#else\n\t\t\t\tpreLightData
-      = GetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t#endif\n\t\t\t\tpreLightData.diffuseFGD
+      = ConvertSurfaceDataToBSDFData(posSS.xy, surfaceData);\n\t\t\t\n\t\t\t\tpreLightData
+      = GetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t\t\n\t\t\t\tpreLightData.diffuseFGD
       = 1.0f;\n\t\t\t    //TODO: investigate why this is needed\n\t\t\t    preLightData.coatPartLambdaV
       = 0;\n\t\t\t    preLightData.coatIblR = 0;\n\t\t\t    preLightData.coatIblF
       = 0;\n\t\t\t    \n\t\t\t\tbuiltinData = VFXGetBuiltinData(i,posInput,surfaceData,bsdfData,preLightData,uvData,alpha);\n\t\t\t}\n\t\t\t\n\t\t\tvoid
@@ -1143,7 +1142,7 @@ VisualEffectResource:
       indirectBuffer;\t\n\t\t#endif\t\n\t\t\n\t\t#if USE_DEAD_LIST_COUNT\n\t\tByteAddressBuffer
       deadListCount;\n\t\t#endif\n\t\t\n\t\tCBUFFER_START(outputParams)\n\t\t\tfloat
       nbMax;\n\t\t\tfloat systemSeed;\n\t\tCBUFFER_END\n\t\t\n\t\tENDHLSL\n\t\t\n\n\t\t\n\t\t\n\t\t//
-      Forward pass\n\t\tPass\n\t\t{\t\t\n\t\t\tTags { \"LightMode\"=\"Forward\" }\n\t\t\t\t\t\n\t\t\tHLSLPROGRAM\n\t\t\t#pragma
+      Forward pass\n\t\tPass\n\t\t{\t\t\n\t\t\tTags { \"LightMode\"=\"ForwardOnly\"}\n\t\t\t\t\t\n\t\t\tHLSLPROGRAM\n\t\t\t#pragma
       target 4.5\n\t\t\t\n\t\t\t#define UNITY_MATERIAL_LIT\n\t\t\t#define LIGHTLOOP_TILE_PASS\n\t\t\t#define
       _ENABLE_FOG_ON_TRANSPARENT\n\t\t\t#define _DISABLE_DECALS\n\t\t\t#define _BLENDMODE_ALPHA\n\t\t\t#define
       _SURFACE_TYPE_TRANSPARENT\n\t\t\t\n\n\t\t\t#pragma multi_compile USE_FPTL_LIGHTLIST
@@ -1202,35 +1201,35 @@ VisualEffectResource:
       Random:Off channels:XYZ */\n\t\t\t{\n\t\t\t    color = Color;\n\t\t\t}\n\t\t\t\n\n\t\t\t\n\t\t\t#pragma
       vertex vert\n\t\t\tVFX_VARYING_PS_INPUTS vert(uint id : SV_VertexID, uint instanceID
       : SV_InstanceID)\n\t\t\t{\n\t\t\t\tuint index = (id >> 2) + instanceID * 2048;\n\t\t\t\tVFX_VARYING_PS_INPUTS
-      o = (VFX_VARYING_PS_INPUTS)0;\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#if VFX_HAS_INDIRECT_DRAW\n\t\t\t\t\t\t#if
-      USE_DEAD_LIST_COUNT\n\t\t\t\t\t\t\tif (index >= asuint(nbMax) - deadListCount.Load(0))\n\t\t\t\t\t\t\t\treturn
-      o;\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\t\t\t\tindex = indirectBuffer[index];\n\t\t\t\t\t\t\tfloat
-      lifetime = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\t\tfloat3
-      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\t\tfloat3
-      color = float3(1,1,1);\n\t\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\t\tbool
-      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\tfloat3
-      axisX = float3(1,0,0);\n\t\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\t\tfloat3
-      axisZ = float3(0,0,1);\n\t\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\t\tfloat
-      angleY = (float)0;\n\t\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotX = (float)0;\n\t\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotZ = (float)0;\n\t\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\t\tfloat
-      scaleX = (float)1;\n\t\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\t\tfloat
-      scaleZ = (float)1;\n\t\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
-      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#else\n\t\t\t\t\t\t\tif
-      (index >= asuint(nbMax))\n\t\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\tbool
-      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t\tif
-      (!alive)\n\t\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\tfloat lifetime
-      = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\t\tfloat3
-      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\t\tfloat3
-      color = float3(1,1,1);\n\t\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\t\tfloat3
-      axisX = float3(1,0,0);\n\t\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\t\tfloat3
-      axisZ = float3(0,0,1);\n\t\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\t\tfloat
-      angleY = (float)0;\n\t\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotX = (float)0;\n\t\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotZ = (float)0;\n\t\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\t\tfloat
-      scaleX = (float)1;\n\t\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\t\tfloat
-      scaleZ = (float)1;\n\t\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
-      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\tOrient_0(
+      o = (VFX_VARYING_PS_INPUTS)0;\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\tuint deadCount
+      = 0;\n\t\t\t\t\t\t#if USE_DEAD_LIST_COUNT\n\t\t\t\t\t\tdeadCount = deadListCount.Load(0);\n\t\t\t\t\t\t#endif\t\n\t\t\t\t\t\tif
+      (index >= asuint(nbMax) - deadCount)\n\t\t\t\t\t\t\treturn o; // cull\n\t\t\t\t\t\t\n\t\t\t\t\t\t#if
+      VFX_HAS_INDIRECT_DRAW\n\t\t\t\t\t\tindex = indirectBuffer[index];\n\t\t\t\t\t\tfloat
+      lifetime = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\tfloat3
+      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\tfloat3
+      color = float3(1,1,1);\n\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\tbool
+      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\tfloat3
+      axisX = float3(1,0,0);\n\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\tfloat3
+      axisZ = float3(0,0,1);\n\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\tfloat
+      angleY = (float)0;\n\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\tfloat
+      pivotX = (float)0;\n\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\tfloat
+      pivotZ = (float)0;\n\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\tfloat
+      scaleX = (float)1;\n\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\tfloat
+      scaleZ = (float)1;\n\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
+      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#else\n\t\t\t\t\t\tbool
+      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\tif
+      (!alive)\n\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tfloat lifetime
+      = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\tfloat3
+      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\tfloat3
+      color = float3(1,1,1);\n\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\tfloat3
+      axisX = float3(1,0,0);\n\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\tfloat3
+      axisZ = float3(0,0,1);\n\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\tfloat
+      angleY = (float)0;\n\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\tfloat
+      pivotX = (float)0;\n\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\tfloat
+      pivotZ = (float)0;\n\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\tfloat
+      scaleX = (float)1;\n\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\tfloat
+      scaleZ = (float)1;\n\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
+      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\tOrient_0(
       /*inout */axisX,  /*inout */axisY,  /*inout */axisZ);\n\t\t\t\t{\n\t\t\t\t    float
       tmp_y = age / lifetime;\n\t\t\t\t    float tmp_z = SampleCurve(uniform_c,tmp_y);\n\t\t\t\t
       \   float tmp_ba = uniform_b * tmp_z;\n\t\t\t\t    float tmp_bb = tmp_ba * uniform_d;\n\t\t\t\t
@@ -1294,9 +1293,8 @@ VisualEffectResource:
       = VFXGetPositionRWS(i);\n\t\t\t\tfloat4 posSS = i.VFX_VARYING_POSCS;\n\t\t\t\tPositionInputs
       posInput = GetPositionInput(posSS.xy, _ScreenSize.zw, posSS.z, posSS.w, posRWS,
       tileIndex);\n\t\t\t\t\n\t\t\t\tfloat alpha;\n\t\t\t\tsurfaceData = VFXGetSurfaceData(i,normalWS,uvData,diffusionProfile,alpha);\t\n\t\t\t\tbsdfData
-      = ConvertSurfaceDataToBSDFData(posSS.xy, surfaceData);\n\t\t\t\n\t\t\t#if HDRP_MATERIAL_TYPE_SIMPLE\n\t\t\t\tpreLightData
-      = SimpleGetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t#else\n\t\t\t\tpreLightData
-      = GetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t#endif\n\t\t\t\tpreLightData.diffuseFGD
+      = ConvertSurfaceDataToBSDFData(posSS.xy, surfaceData);\n\t\t\t\n\t\t\t\tpreLightData
+      = GetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t\t\n\t\t\t\tpreLightData.diffuseFGD
       = 1.0f;\n\t\t\t    //TODO: investigate why this is needed\n\t\t\t    preLightData.coatPartLambdaV
       = 0;\n\t\t\t    preLightData.coatIblR = 0;\n\t\t\t    preLightData.coatIblF
       = 0;\n\t\t\t    \n\t\t\t\tbuiltinData = VFXGetBuiltinData(i,posInput,surfaceData,bsdfData,preLightData,uvData,alpha);\n\t\t\t}\n\t\t\t\n\t\t\tvoid
@@ -1449,7 +1447,7 @@ VisualEffectResource:
       indirectBuffer;\t\n\t\t#endif\t\n\t\t\n\t\t#if USE_DEAD_LIST_COUNT\n\t\tByteAddressBuffer
       deadListCount;\n\t\t#endif\n\t\t\n\t\tCBUFFER_START(outputParams)\n\t\t\tfloat
       nbMax;\n\t\t\tfloat systemSeed;\n\t\tCBUFFER_END\n\t\t\n\t\tENDHLSL\n\t\t\n\n\t\t\n\t\t\n\t\t//
-      Forward pass\n\t\tPass\n\t\t{\t\t\n\t\t\tTags { \"LightMode\"=\"Forward\" }\n\t\t\t\t\t\n\t\t\tHLSLPROGRAM\n\t\t\t#pragma
+      Forward pass\n\t\tPass\n\t\t{\t\t\n\t\t\tTags { \"LightMode\"=\"ForwardOnly\"}\n\t\t\t\t\t\n\t\t\tHLSLPROGRAM\n\t\t\t#pragma
       target 4.5\n\t\t\t\n\t\t\t#define UNITY_MATERIAL_LIT\n\t\t\t#define LIGHTLOOP_TILE_PASS\n\t\t\t#define
       _ENABLE_FOG_ON_TRANSPARENT\n\t\t\t#define _DISABLE_DECALS\n\t\t\t#define _BLENDMODE_ALPHA\n\t\t\t#define
       _SURFACE_TYPE_TRANSPARENT\n\t\t\t\n\n\t\t\t#pragma multi_compile USE_FPTL_LIGHTLIST
@@ -1508,35 +1506,35 @@ VisualEffectResource:
       Random:Off channels:XYZ */\n\t\t\t{\n\t\t\t    color = Color;\n\t\t\t}\n\t\t\t\n\n\t\t\t\n\t\t\t#pragma
       vertex vert\n\t\t\tVFX_VARYING_PS_INPUTS vert(uint id : SV_VertexID, uint instanceID
       : SV_InstanceID)\n\t\t\t{\n\t\t\t\tuint index = (id >> 2) + instanceID * 2048;\n\t\t\t\tVFX_VARYING_PS_INPUTS
-      o = (VFX_VARYING_PS_INPUTS)0;\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#if VFX_HAS_INDIRECT_DRAW\n\t\t\t\t\t\t#if
-      USE_DEAD_LIST_COUNT\n\t\t\t\t\t\t\tif (index >= asuint(nbMax) - deadListCount.Load(0))\n\t\t\t\t\t\t\t\treturn
-      o;\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\t\t\t\tindex = indirectBuffer[index];\n\t\t\t\t\t\t\tfloat
-      lifetime = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\t\tfloat3
-      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\t\tfloat3
-      color = float3(1,1,1);\n\t\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\t\tbool
-      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\tfloat3
-      axisX = float3(1,0,0);\n\t\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\t\tfloat3
-      axisZ = float3(0,0,1);\n\t\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\t\tfloat
-      angleY = (float)0;\n\t\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotX = (float)0;\n\t\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotZ = (float)0;\n\t\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\t\tfloat
-      scaleX = (float)1;\n\t\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\t\tfloat
-      scaleZ = (float)1;\n\t\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
-      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#else\n\t\t\t\t\t\t\tif
-      (index >= asuint(nbMax))\n\t\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\tbool
-      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t\tif
-      (!alive)\n\t\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\tfloat lifetime
-      = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\t\tfloat3
-      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\t\tfloat3
-      color = float3(1,1,1);\n\t\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\t\tfloat3
-      axisX = float3(1,0,0);\n\t\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\t\tfloat3
-      axisZ = float3(0,0,1);\n\t\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\t\tfloat
-      angleY = (float)0;\n\t\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotX = (float)0;\n\t\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotZ = (float)0;\n\t\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\t\tfloat
-      scaleX = (float)1;\n\t\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\t\tfloat
-      scaleZ = (float)1;\n\t\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
-      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\tOrient_0(
+      o = (VFX_VARYING_PS_INPUTS)0;\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\tuint deadCount
+      = 0;\n\t\t\t\t\t\t#if USE_DEAD_LIST_COUNT\n\t\t\t\t\t\tdeadCount = deadListCount.Load(0);\n\t\t\t\t\t\t#endif\t\n\t\t\t\t\t\tif
+      (index >= asuint(nbMax) - deadCount)\n\t\t\t\t\t\t\treturn o; // cull\n\t\t\t\t\t\t\n\t\t\t\t\t\t#if
+      VFX_HAS_INDIRECT_DRAW\n\t\t\t\t\t\tindex = indirectBuffer[index];\n\t\t\t\t\t\tfloat
+      lifetime = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\tfloat3
+      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\tfloat3
+      color = float3(1,1,1);\n\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\tbool
+      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\tfloat3
+      axisX = float3(1,0,0);\n\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\tfloat3
+      axisZ = float3(0,0,1);\n\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\tfloat
+      angleY = (float)0;\n\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\tfloat
+      pivotX = (float)0;\n\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\tfloat
+      pivotZ = (float)0;\n\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\tfloat
+      scaleX = (float)1;\n\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\tfloat
+      scaleZ = (float)1;\n\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
+      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#else\n\t\t\t\t\t\tbool
+      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\tif
+      (!alive)\n\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tfloat lifetime
+      = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\tfloat3
+      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\tfloat3
+      color = float3(1,1,1);\n\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\tfloat3
+      axisX = float3(1,0,0);\n\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\tfloat3
+      axisZ = float3(0,0,1);\n\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\tfloat
+      angleY = (float)0;\n\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\tfloat
+      pivotX = (float)0;\n\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\tfloat
+      pivotZ = (float)0;\n\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\tfloat
+      scaleX = (float)1;\n\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\tfloat
+      scaleZ = (float)1;\n\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
+      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\tOrient_0(
       /*inout */axisX,  /*inout */axisY,  /*inout */axisZ);\n\t\t\t\t{\n\t\t\t\t    float
       tmp_y = age / lifetime;\n\t\t\t\t    float tmp_z = SampleCurve(uniform_c,tmp_y);\n\t\t\t\t
       \   float tmp_ba = uniform_b * tmp_z;\n\t\t\t\t    float tmp_bb = tmp_ba * uniform_d;\n\t\t\t\t
@@ -1601,9 +1599,8 @@ VisualEffectResource:
       posRWS = VFXGetPositionRWS(i);\n\t\t\t\tfloat4 posSS = i.VFX_VARYING_POSCS;\n\t\t\t\tPositionInputs
       posInput = GetPositionInput(posSS.xy, _ScreenSize.zw, posSS.z, posSS.w, posRWS,
       tileIndex);\n\t\t\t\t\n\t\t\t\tfloat alpha;\n\t\t\t\tsurfaceData = VFXGetSurfaceData(i,normalWS,uvData,diffusionProfile,alpha);\t\n\t\t\t\tbsdfData
-      = ConvertSurfaceDataToBSDFData(posSS.xy, surfaceData);\n\t\t\t\n\t\t\t#if HDRP_MATERIAL_TYPE_SIMPLE\n\t\t\t\tpreLightData
-      = SimpleGetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t#else\n\t\t\t\tpreLightData
-      = GetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t#endif\n\t\t\t\tpreLightData.diffuseFGD
+      = ConvertSurfaceDataToBSDFData(posSS.xy, surfaceData);\n\t\t\t\n\t\t\t\tpreLightData
+      = GetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t\t\n\t\t\t\tpreLightData.diffuseFGD
       = 1.0f;\n\t\t\t    //TODO: investigate why this is needed\n\t\t\t    preLightData.coatPartLambdaV
       = 0;\n\t\t\t    preLightData.coatIblR = 0;\n\t\t\t    preLightData.coatIblF
       = 0;\n\t\t\t    \n\t\t\t\tbuiltinData = VFXGetBuiltinData(i,posInput,surfaceData,bsdfData,preLightData,uvData,alpha);\n\t\t\t}\n\t\t\t\n\t\t\tvoid
@@ -1663,7 +1660,7 @@ VisualEffectResource:
       indirectBuffer;\t\n\t\t#endif\t\n\t\t\n\t\t#if USE_DEAD_LIST_COUNT\n\t\tByteAddressBuffer
       deadListCount;\n\t\t#endif\n\t\t\n\t\tCBUFFER_START(outputParams)\n\t\t\tfloat
       nbMax;\n\t\t\tfloat systemSeed;\n\t\tCBUFFER_END\n\t\t\n\t\tENDHLSL\n\t\t\n\n\t\t\n\t\t\n\t\t//
-      Forward pass\n\t\tPass\n\t\t{\t\t\n\t\t\tTags { \"LightMode\"=\"Forward\" }\n\t\t\t\t\t\n\t\t\tHLSLPROGRAM\n\t\t\t#pragma
+      Forward pass\n\t\tPass\n\t\t{\t\t\n\t\t\tTags { \"LightMode\"=\"ForwardOnly\"}\n\t\t\t\t\t\n\t\t\tHLSLPROGRAM\n\t\t\t#pragma
       target 4.5\n\t\t\t\n\t\t\t#define UNITY_MATERIAL_LIT\n\t\t\t#define LIGHTLOOP_TILE_PASS\n\t\t\t#define
       _ENABLE_FOG_ON_TRANSPARENT\n\t\t\t#define _DISABLE_DECALS\n\t\t\t#define _BLENDMODE_ALPHA\n\t\t\t#define
       _SURFACE_TYPE_TRANSPARENT\n\t\t\t\n\n\t\t\t#pragma multi_compile USE_FPTL_LIGHTLIST
@@ -1722,35 +1719,35 @@ VisualEffectResource:
       Random:Off channels:XYZ */\n\t\t\t{\n\t\t\t    color = Color;\n\t\t\t}\n\t\t\t\n\n\t\t\t\n\t\t\t#pragma
       vertex vert\n\t\t\tVFX_VARYING_PS_INPUTS vert(uint id : SV_VertexID, uint instanceID
       : SV_InstanceID)\n\t\t\t{\n\t\t\t\tuint index = (id >> 2) + instanceID * 2048;\n\t\t\t\tVFX_VARYING_PS_INPUTS
-      o = (VFX_VARYING_PS_INPUTS)0;\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#if VFX_HAS_INDIRECT_DRAW\n\t\t\t\t\t\t#if
-      USE_DEAD_LIST_COUNT\n\t\t\t\t\t\t\tif (index >= asuint(nbMax) - deadListCount.Load(0))\n\t\t\t\t\t\t\t\treturn
-      o;\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\t\t\t\tindex = indirectBuffer[index];\n\t\t\t\t\t\t\tfloat
-      lifetime = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\t\tfloat3
-      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\t\tfloat3
-      color = float3(1,1,1);\n\t\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\t\tbool
-      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\tfloat3
-      axisX = float3(1,0,0);\n\t\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\t\tfloat3
-      axisZ = float3(0,0,1);\n\t\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\t\tfloat
-      angleY = (float)0;\n\t\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotX = (float)0;\n\t\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotZ = (float)0;\n\t\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\t\tfloat
-      scaleX = (float)1;\n\t\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\t\tfloat
-      scaleZ = (float)1;\n\t\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
-      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#else\n\t\t\t\t\t\t\tif
-      (index >= asuint(nbMax))\n\t\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\tbool
-      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t\tif
-      (!alive)\n\t\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\tfloat lifetime
-      = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\t\tfloat3
-      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\t\tfloat3
-      color = float3(1,1,1);\n\t\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\t\tfloat3
-      axisX = float3(1,0,0);\n\t\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\t\tfloat3
-      axisZ = float3(0,0,1);\n\t\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\t\tfloat
-      angleY = (float)0;\n\t\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotX = (float)0;\n\t\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotZ = (float)0;\n\t\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\t\tfloat
-      scaleX = (float)1;\n\t\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\t\tfloat
-      scaleZ = (float)1;\n\t\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
-      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\tOrient_0(
+      o = (VFX_VARYING_PS_INPUTS)0;\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\tuint deadCount
+      = 0;\n\t\t\t\t\t\t#if USE_DEAD_LIST_COUNT\n\t\t\t\t\t\tdeadCount = deadListCount.Load(0);\n\t\t\t\t\t\t#endif\t\n\t\t\t\t\t\tif
+      (index >= asuint(nbMax) - deadCount)\n\t\t\t\t\t\t\treturn o; // cull\n\t\t\t\t\t\t\n\t\t\t\t\t\t#if
+      VFX_HAS_INDIRECT_DRAW\n\t\t\t\t\t\tindex = indirectBuffer[index];\n\t\t\t\t\t\tfloat
+      lifetime = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\tfloat3
+      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\tfloat3
+      color = float3(1,1,1);\n\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\tbool
+      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\tfloat3
+      axisX = float3(1,0,0);\n\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\tfloat3
+      axisZ = float3(0,0,1);\n\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\tfloat
+      angleY = (float)0;\n\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\tfloat
+      pivotX = (float)0;\n\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\tfloat
+      pivotZ = (float)0;\n\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\tfloat
+      scaleX = (float)1;\n\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\tfloat
+      scaleZ = (float)1;\n\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
+      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#else\n\t\t\t\t\t\tbool
+      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\tif
+      (!alive)\n\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tfloat lifetime
+      = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\tfloat3
+      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\tfloat3
+      color = float3(1,1,1);\n\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\tfloat3
+      axisX = float3(1,0,0);\n\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\tfloat3
+      axisZ = float3(0,0,1);\n\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\tfloat
+      angleY = (float)0;\n\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\tfloat
+      pivotX = (float)0;\n\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\tfloat
+      pivotZ = (float)0;\n\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\tfloat
+      scaleX = (float)1;\n\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\tfloat
+      scaleZ = (float)1;\n\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
+      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\tOrient_0(
       /*inout */axisX,  /*inout */axisY,  /*inout */axisZ);\n\t\t\t\t{\n\t\t\t\t    float
       tmp_y = age / lifetime;\n\t\t\t\t    float tmp_z = SampleCurve(uniform_c,tmp_y);\n\t\t\t\t
       \   float tmp_ba = uniform_b * tmp_z;\n\t\t\t\t    float tmp_bb = tmp_ba * uniform_d;\n\t\t\t\t
@@ -1814,9 +1811,8 @@ VisualEffectResource:
       = VFXGetPositionRWS(i);\n\t\t\t\tfloat4 posSS = i.VFX_VARYING_POSCS;\n\t\t\t\tPositionInputs
       posInput = GetPositionInput(posSS.xy, _ScreenSize.zw, posSS.z, posSS.w, posRWS,
       tileIndex);\n\t\t\t\t\n\t\t\t\tfloat alpha;\n\t\t\t\tsurfaceData = VFXGetSurfaceData(i,normalWS,uvData,diffusionProfile,alpha);\t\n\t\t\t\tbsdfData
-      = ConvertSurfaceDataToBSDFData(posSS.xy, surfaceData);\n\t\t\t\n\t\t\t#if HDRP_MATERIAL_TYPE_SIMPLE\n\t\t\t\tpreLightData
-      = SimpleGetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t#else\n\t\t\t\tpreLightData
-      = GetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t#endif\n\t\t\t\tpreLightData.diffuseFGD
+      = ConvertSurfaceDataToBSDFData(posSS.xy, surfaceData);\n\t\t\t\n\t\t\t\tpreLightData
+      = GetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t\t\n\t\t\t\tpreLightData.diffuseFGD
       = 1.0f;\n\t\t\t    //TODO: investigate why this is needed\n\t\t\t    preLightData.coatPartLambdaV
       = 0;\n\t\t\t    preLightData.coatIblR = 0;\n\t\t\t    preLightData.coatIblF
       = 0;\n\t\t\t    \n\t\t\t\tbuiltinData = VFXGetBuiltinData(i,posInput,surfaceData,bsdfData,preLightData,uvData,alpha);\n\t\t\t}\n\t\t\t\n\t\t\tvoid
@@ -1969,7 +1965,7 @@ VisualEffectResource:
       indirectBuffer;\t\n\t\t#endif\t\n\t\t\n\t\t#if USE_DEAD_LIST_COUNT\n\t\tByteAddressBuffer
       deadListCount;\n\t\t#endif\n\t\t\n\t\tCBUFFER_START(outputParams)\n\t\t\tfloat
       nbMax;\n\t\t\tfloat systemSeed;\n\t\tCBUFFER_END\n\t\t\n\t\tENDHLSL\n\t\t\n\n\t\t\n\t\t\n\t\t//
-      Forward pass\n\t\tPass\n\t\t{\t\t\n\t\t\tTags { \"LightMode\"=\"Forward\" }\n\t\t\t\t\t\n\t\t\tHLSLPROGRAM\n\t\t\t#pragma
+      Forward pass\n\t\tPass\n\t\t{\t\t\n\t\t\tTags { \"LightMode\"=\"ForwardOnly\"}\n\t\t\t\t\t\n\t\t\tHLSLPROGRAM\n\t\t\t#pragma
       target 4.5\n\t\t\t\n\t\t\t#define UNITY_MATERIAL_LIT\n\t\t\t#define LIGHTLOOP_TILE_PASS\n\t\t\t#define
       _ENABLE_FOG_ON_TRANSPARENT\n\t\t\t#define _DISABLE_DECALS\n\t\t\t#define _BLENDMODE_ALPHA\n\t\t\t#define
       _SURFACE_TYPE_TRANSPARENT\n\t\t\t\n\n\t\t\t#pragma multi_compile USE_FPTL_LIGHTLIST
@@ -2028,35 +2024,35 @@ VisualEffectResource:
       Random:Off channels:XYZ */\n\t\t\t{\n\t\t\t    color = Color;\n\t\t\t}\n\t\t\t\n\n\t\t\t\n\t\t\t#pragma
       vertex vert\n\t\t\tVFX_VARYING_PS_INPUTS vert(uint id : SV_VertexID, uint instanceID
       : SV_InstanceID)\n\t\t\t{\n\t\t\t\tuint index = (id >> 2) + instanceID * 2048;\n\t\t\t\tVFX_VARYING_PS_INPUTS
-      o = (VFX_VARYING_PS_INPUTS)0;\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#if VFX_HAS_INDIRECT_DRAW\n\t\t\t\t\t\t#if
-      USE_DEAD_LIST_COUNT\n\t\t\t\t\t\t\tif (index >= asuint(nbMax) - deadListCount.Load(0))\n\t\t\t\t\t\t\t\treturn
-      o;\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\t\t\t\tindex = indirectBuffer[index];\n\t\t\t\t\t\t\tfloat
-      lifetime = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\t\tfloat3
-      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\t\tfloat3
-      color = float3(1,1,1);\n\t\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\t\tbool
-      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\tfloat3
-      axisX = float3(1,0,0);\n\t\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\t\tfloat3
-      axisZ = float3(0,0,1);\n\t\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\t\tfloat
-      angleY = (float)0;\n\t\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotX = (float)0;\n\t\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotZ = (float)0;\n\t\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\t\tfloat
-      scaleX = (float)1;\n\t\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\t\tfloat
-      scaleZ = (float)1;\n\t\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
-      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#else\n\t\t\t\t\t\t\tif
-      (index >= asuint(nbMax))\n\t\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\tbool
-      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t\tif
-      (!alive)\n\t\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\tfloat lifetime
-      = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\t\tfloat3
-      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\t\tfloat3
-      color = float3(1,1,1);\n\t\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\t\tfloat3
-      axisX = float3(1,0,0);\n\t\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\t\tfloat3
-      axisZ = float3(0,0,1);\n\t\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\t\tfloat
-      angleY = (float)0;\n\t\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotX = (float)0;\n\t\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotZ = (float)0;\n\t\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\t\tfloat
-      scaleX = (float)1;\n\t\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\t\tfloat
-      scaleZ = (float)1;\n\t\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
-      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\tOrient_0(
+      o = (VFX_VARYING_PS_INPUTS)0;\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\tuint deadCount
+      = 0;\n\t\t\t\t\t\t#if USE_DEAD_LIST_COUNT\n\t\t\t\t\t\tdeadCount = deadListCount.Load(0);\n\t\t\t\t\t\t#endif\t\n\t\t\t\t\t\tif
+      (index >= asuint(nbMax) - deadCount)\n\t\t\t\t\t\t\treturn o; // cull\n\t\t\t\t\t\t\n\t\t\t\t\t\t#if
+      VFX_HAS_INDIRECT_DRAW\n\t\t\t\t\t\tindex = indirectBuffer[index];\n\t\t\t\t\t\tfloat
+      lifetime = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\tfloat3
+      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\tfloat3
+      color = float3(1,1,1);\n\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\tbool
+      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\tfloat3
+      axisX = float3(1,0,0);\n\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\tfloat3
+      axisZ = float3(0,0,1);\n\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\tfloat
+      angleY = (float)0;\n\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\tfloat
+      pivotX = (float)0;\n\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\tfloat
+      pivotZ = (float)0;\n\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\tfloat
+      scaleX = (float)1;\n\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\tfloat
+      scaleZ = (float)1;\n\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
+      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#else\n\t\t\t\t\t\tbool
+      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\tif
+      (!alive)\n\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tfloat lifetime
+      = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\tfloat3
+      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\tfloat3
+      color = float3(1,1,1);\n\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\tfloat3
+      axisX = float3(1,0,0);\n\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\tfloat3
+      axisZ = float3(0,0,1);\n\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\tfloat
+      angleY = (float)0;\n\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\tfloat
+      pivotX = (float)0;\n\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\tfloat
+      pivotZ = (float)0;\n\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\tfloat
+      scaleX = (float)1;\n\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\tfloat
+      scaleZ = (float)1;\n\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
+      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\tOrient_0(
       /*inout */axisX,  /*inout */axisY,  /*inout */axisZ);\n\t\t\t\t{\n\t\t\t\t    float
       tmp_y = age / lifetime;\n\t\t\t\t    float tmp_z = SampleCurve(uniform_c,tmp_y);\n\t\t\t\t
       \   float tmp_ba = uniform_b * tmp_z;\n\t\t\t\t    float tmp_bb = tmp_ba * uniform_d;\n\t\t\t\t
@@ -2121,9 +2117,8 @@ VisualEffectResource:
       posRWS = VFXGetPositionRWS(i);\n\t\t\t\tfloat4 posSS = i.VFX_VARYING_POSCS;\n\t\t\t\tPositionInputs
       posInput = GetPositionInput(posSS.xy, _ScreenSize.zw, posSS.z, posSS.w, posRWS,
       tileIndex);\n\t\t\t\t\n\t\t\t\tfloat alpha;\n\t\t\t\tsurfaceData = VFXGetSurfaceData(i,normalWS,uvData,diffusionProfile,alpha);\t\n\t\t\t\tbsdfData
-      = ConvertSurfaceDataToBSDFData(posSS.xy, surfaceData);\n\t\t\t\n\t\t\t#if HDRP_MATERIAL_TYPE_SIMPLE\n\t\t\t\tpreLightData
-      = SimpleGetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t#else\n\t\t\t\tpreLightData
-      = GetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t#endif\n\t\t\t\tpreLightData.diffuseFGD
+      = ConvertSurfaceDataToBSDFData(posSS.xy, surfaceData);\n\t\t\t\n\t\t\t\tpreLightData
+      = GetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t\t\n\t\t\t\tpreLightData.diffuseFGD
       = 1.0f;\n\t\t\t    //TODO: investigate why this is needed\n\t\t\t    preLightData.coatPartLambdaV
       = 0;\n\t\t\t    preLightData.coatIblR = 0;\n\t\t\t    preLightData.coatIblF
       = 0;\n\t\t\t    \n\t\t\t\tbuiltinData = VFXGetBuiltinData(i,posInput,surfaceData,bsdfData,preLightData,uvData,alpha);\n\t\t\t}\n\t\t\t\n\t\t\tvoid
@@ -2183,7 +2178,7 @@ VisualEffectResource:
       indirectBuffer;\t\n\t\t#endif\t\n\t\t\n\t\t#if USE_DEAD_LIST_COUNT\n\t\tByteAddressBuffer
       deadListCount;\n\t\t#endif\n\t\t\n\t\tCBUFFER_START(outputParams)\n\t\t\tfloat
       nbMax;\n\t\t\tfloat systemSeed;\n\t\tCBUFFER_END\n\t\t\n\t\tENDHLSL\n\t\t\n\n\t\t\n\t\t\n\t\t//
-      Forward pass\n\t\tPass\n\t\t{\t\t\n\t\t\tTags { \"LightMode\"=\"Forward\" }\n\t\t\t\t\t\n\t\t\tHLSLPROGRAM\n\t\t\t#pragma
+      Forward pass\n\t\tPass\n\t\t{\t\t\n\t\t\tTags { \"LightMode\"=\"ForwardOnly\"}\n\t\t\t\t\t\n\t\t\tHLSLPROGRAM\n\t\t\t#pragma
       target 4.5\n\t\t\t\n\t\t\t#define UNITY_MATERIAL_LIT\n\t\t\t#define LIGHTLOOP_TILE_PASS\n\t\t\t#define
       _ENABLE_FOG_ON_TRANSPARENT\n\t\t\t#define _DISABLE_DECALS\n\t\t\t#define _BLENDMODE_ALPHA\n\t\t\t#define
       _SURFACE_TYPE_TRANSPARENT\n\t\t\t\n\n\t\t\t#pragma multi_compile USE_FPTL_LIGHTLIST
@@ -2242,35 +2237,35 @@ VisualEffectResource:
       Random:Off channels:XYZ */\n\t\t\t{\n\t\t\t    color = Color;\n\t\t\t}\n\t\t\t\n\n\t\t\t\n\t\t\t#pragma
       vertex vert\n\t\t\tVFX_VARYING_PS_INPUTS vert(uint id : SV_VertexID, uint instanceID
       : SV_InstanceID)\n\t\t\t{\n\t\t\t\tuint index = (id >> 2) + instanceID * 2048;\n\t\t\t\tVFX_VARYING_PS_INPUTS
-      o = (VFX_VARYING_PS_INPUTS)0;\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#if VFX_HAS_INDIRECT_DRAW\n\t\t\t\t\t\t#if
-      USE_DEAD_LIST_COUNT\n\t\t\t\t\t\t\tif (index >= asuint(nbMax) - deadListCount.Load(0))\n\t\t\t\t\t\t\t\treturn
-      o;\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\t\t\t\tindex = indirectBuffer[index];\n\t\t\t\t\t\t\tfloat
-      lifetime = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\t\tfloat3
-      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\t\tfloat3
-      color = float3(1,1,1);\n\t\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\t\tbool
-      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\tfloat3
-      axisX = float3(1,0,0);\n\t\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\t\tfloat3
-      axisZ = float3(0,0,1);\n\t\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\t\tfloat
-      angleY = (float)0;\n\t\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotX = (float)0;\n\t\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotZ = (float)0;\n\t\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\t\tfloat
-      scaleX = (float)1;\n\t\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\t\tfloat
-      scaleZ = (float)1;\n\t\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
-      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#else\n\t\t\t\t\t\t\tif
-      (index >= asuint(nbMax))\n\t\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\tbool
-      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t\tif
-      (!alive)\n\t\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\tfloat lifetime
-      = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\t\tfloat3
-      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\t\tfloat3
-      color = float3(1,1,1);\n\t\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\t\tfloat3
-      axisX = float3(1,0,0);\n\t\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\t\tfloat3
-      axisZ = float3(0,0,1);\n\t\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\t\tfloat
-      angleY = (float)0;\n\t\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotX = (float)0;\n\t\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotZ = (float)0;\n\t\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\t\tfloat
-      scaleX = (float)1;\n\t\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\t\tfloat
-      scaleZ = (float)1;\n\t\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
-      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\tOrient_0(
+      o = (VFX_VARYING_PS_INPUTS)0;\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\tuint deadCount
+      = 0;\n\t\t\t\t\t\t#if USE_DEAD_LIST_COUNT\n\t\t\t\t\t\tdeadCount = deadListCount.Load(0);\n\t\t\t\t\t\t#endif\t\n\t\t\t\t\t\tif
+      (index >= asuint(nbMax) - deadCount)\n\t\t\t\t\t\t\treturn o; // cull\n\t\t\t\t\t\t\n\t\t\t\t\t\t#if
+      VFX_HAS_INDIRECT_DRAW\n\t\t\t\t\t\tindex = indirectBuffer[index];\n\t\t\t\t\t\tfloat
+      lifetime = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\tfloat3
+      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\tfloat3
+      color = float3(1,1,1);\n\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\tbool
+      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\tfloat3
+      axisX = float3(1,0,0);\n\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\tfloat3
+      axisZ = float3(0,0,1);\n\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\tfloat
+      angleY = (float)0;\n\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\tfloat
+      pivotX = (float)0;\n\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\tfloat
+      pivotZ = (float)0;\n\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\tfloat
+      scaleX = (float)1;\n\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\tfloat
+      scaleZ = (float)1;\n\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
+      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#else\n\t\t\t\t\t\tbool
+      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\tif
+      (!alive)\n\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tfloat lifetime
+      = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\tfloat3
+      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\tfloat3
+      color = float3(1,1,1);\n\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\tfloat3
+      axisX = float3(1,0,0);\n\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\tfloat3
+      axisZ = float3(0,0,1);\n\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\tfloat
+      angleY = (float)0;\n\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\tfloat
+      pivotX = (float)0;\n\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\tfloat
+      pivotZ = (float)0;\n\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\tfloat
+      scaleX = (float)1;\n\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\tfloat
+      scaleZ = (float)1;\n\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
+      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\tOrient_0(
       /*inout */axisX,  /*inout */axisY,  /*inout */axisZ);\n\t\t\t\t{\n\t\t\t\t    float
       tmp_y = age / lifetime;\n\t\t\t\t    float tmp_z = SampleCurve(uniform_c,tmp_y);\n\t\t\t\t
       \   float tmp_ba = uniform_b * tmp_z;\n\t\t\t\t    float tmp_bb = tmp_ba * uniform_d;\n\t\t\t\t
@@ -2334,9 +2329,8 @@ VisualEffectResource:
       = VFXGetPositionRWS(i);\n\t\t\t\tfloat4 posSS = i.VFX_VARYING_POSCS;\n\t\t\t\tPositionInputs
       posInput = GetPositionInput(posSS.xy, _ScreenSize.zw, posSS.z, posSS.w, posRWS,
       tileIndex);\n\t\t\t\t\n\t\t\t\tfloat alpha;\n\t\t\t\tsurfaceData = VFXGetSurfaceData(i,normalWS,uvData,diffusionProfile,alpha);\t\n\t\t\t\tbsdfData
-      = ConvertSurfaceDataToBSDFData(posSS.xy, surfaceData);\n\t\t\t\n\t\t\t#if HDRP_MATERIAL_TYPE_SIMPLE\n\t\t\t\tpreLightData
-      = SimpleGetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t#else\n\t\t\t\tpreLightData
-      = GetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t#endif\n\t\t\t\tpreLightData.diffuseFGD
+      = ConvertSurfaceDataToBSDFData(posSS.xy, surfaceData);\n\t\t\t\n\t\t\t\tpreLightData
+      = GetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t\t\n\t\t\t\tpreLightData.diffuseFGD
       = 1.0f;\n\t\t\t    //TODO: investigate why this is needed\n\t\t\t    preLightData.coatPartLambdaV
       = 0;\n\t\t\t    preLightData.coatIblR = 0;\n\t\t\t    preLightData.coatIblF
       = 0;\n\t\t\t    \n\t\t\t\tbuiltinData = VFXGetBuiltinData(i,posInput,surfaceData,bsdfData,preLightData,uvData,alpha);\n\t\t\t}\n\t\t\t\n\t\t\tvoid
@@ -2489,7 +2483,7 @@ VisualEffectResource:
       indirectBuffer;\t\n\t\t#endif\t\n\t\t\n\t\t#if USE_DEAD_LIST_COUNT\n\t\tByteAddressBuffer
       deadListCount;\n\t\t#endif\n\t\t\n\t\tCBUFFER_START(outputParams)\n\t\t\tfloat
       nbMax;\n\t\t\tfloat systemSeed;\n\t\tCBUFFER_END\n\t\t\n\t\tENDHLSL\n\t\t\n\n\t\t\n\t\t\n\t\t//
-      Forward pass\n\t\tPass\n\t\t{\t\t\n\t\t\tTags { \"LightMode\"=\"Forward\" }\n\t\t\t\t\t\n\t\t\tHLSLPROGRAM\n\t\t\t#pragma
+      Forward pass\n\t\tPass\n\t\t{\t\t\n\t\t\tTags { \"LightMode\"=\"ForwardOnly\"}\n\t\t\t\t\t\n\t\t\tHLSLPROGRAM\n\t\t\t#pragma
       target 4.5\n\t\t\t\n\t\t\t#define UNITY_MATERIAL_LIT\n\t\t\t#define LIGHTLOOP_TILE_PASS\n\t\t\t#define
       _ENABLE_FOG_ON_TRANSPARENT\n\t\t\t#define _DISABLE_DECALS\n\t\t\t#define _BLENDMODE_ALPHA\n\t\t\t#define
       _SURFACE_TYPE_TRANSPARENT\n\t\t\t\n\n\t\t\t#pragma multi_compile USE_FPTL_LIGHTLIST
@@ -2548,35 +2542,35 @@ VisualEffectResource:
       Random:Off channels:XYZ */\n\t\t\t{\n\t\t\t    color = Color;\n\t\t\t}\n\t\t\t\n\n\t\t\t\n\t\t\t#pragma
       vertex vert\n\t\t\tVFX_VARYING_PS_INPUTS vert(uint id : SV_VertexID, uint instanceID
       : SV_InstanceID)\n\t\t\t{\n\t\t\t\tuint index = (id >> 2) + instanceID * 2048;\n\t\t\t\tVFX_VARYING_PS_INPUTS
-      o = (VFX_VARYING_PS_INPUTS)0;\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#if VFX_HAS_INDIRECT_DRAW\n\t\t\t\t\t\t#if
-      USE_DEAD_LIST_COUNT\n\t\t\t\t\t\t\tif (index >= asuint(nbMax) - deadListCount.Load(0))\n\t\t\t\t\t\t\t\treturn
-      o;\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\t\t\t\tindex = indirectBuffer[index];\n\t\t\t\t\t\t\tfloat
-      lifetime = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\t\tfloat3
-      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\t\tfloat3
-      color = float3(1,1,1);\n\t\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\t\tbool
-      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\tfloat3
-      axisX = float3(1,0,0);\n\t\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\t\tfloat3
-      axisZ = float3(0,0,1);\n\t\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\t\tfloat
-      angleY = (float)0;\n\t\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotX = (float)0;\n\t\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotZ = (float)0;\n\t\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\t\tfloat
-      scaleX = (float)1;\n\t\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\t\tfloat
-      scaleZ = (float)1;\n\t\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
-      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#else\n\t\t\t\t\t\t\tif
-      (index >= asuint(nbMax))\n\t\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\tbool
-      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t\tif
-      (!alive)\n\t\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\tfloat lifetime
-      = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\t\tfloat3
-      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\t\tfloat3
-      color = float3(1,1,1);\n\t\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\t\tfloat3
-      axisX = float3(1,0,0);\n\t\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\t\tfloat3
-      axisZ = float3(0,0,1);\n\t\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\t\tfloat
-      angleY = (float)0;\n\t\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotX = (float)0;\n\t\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotZ = (float)0;\n\t\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\t\tfloat
-      scaleX = (float)1;\n\t\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\t\tfloat
-      scaleZ = (float)1;\n\t\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
-      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\tOrient_0(
+      o = (VFX_VARYING_PS_INPUTS)0;\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\tuint deadCount
+      = 0;\n\t\t\t\t\t\t#if USE_DEAD_LIST_COUNT\n\t\t\t\t\t\tdeadCount = deadListCount.Load(0);\n\t\t\t\t\t\t#endif\t\n\t\t\t\t\t\tif
+      (index >= asuint(nbMax) - deadCount)\n\t\t\t\t\t\t\treturn o; // cull\n\t\t\t\t\t\t\n\t\t\t\t\t\t#if
+      VFX_HAS_INDIRECT_DRAW\n\t\t\t\t\t\tindex = indirectBuffer[index];\n\t\t\t\t\t\tfloat
+      lifetime = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\tfloat3
+      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\tfloat3
+      color = float3(1,1,1);\n\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\tbool
+      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\tfloat3
+      axisX = float3(1,0,0);\n\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\tfloat3
+      axisZ = float3(0,0,1);\n\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\tfloat
+      angleY = (float)0;\n\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\tfloat
+      pivotX = (float)0;\n\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\tfloat
+      pivotZ = (float)0;\n\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\tfloat
+      scaleX = (float)1;\n\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\tfloat
+      scaleZ = (float)1;\n\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
+      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#else\n\t\t\t\t\t\tbool
+      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\tif
+      (!alive)\n\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tfloat lifetime
+      = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\tfloat3
+      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\tfloat3
+      color = float3(1,1,1);\n\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\tfloat3
+      axisX = float3(1,0,0);\n\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\tfloat3
+      axisZ = float3(0,0,1);\n\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\tfloat
+      angleY = (float)0;\n\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\tfloat
+      pivotX = (float)0;\n\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\tfloat
+      pivotZ = (float)0;\n\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\tfloat
+      scaleX = (float)1;\n\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\tfloat
+      scaleZ = (float)1;\n\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
+      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\tOrient_0(
       /*inout */axisX,  /*inout */axisY,  /*inout */axisZ);\n\t\t\t\t{\n\t\t\t\t    float
       tmp_y = age / lifetime;\n\t\t\t\t    float tmp_z = SampleCurve(uniform_c,tmp_y);\n\t\t\t\t
       \   float tmp_ba = uniform_b * tmp_z;\n\t\t\t\t    float tmp_bb = tmp_ba * uniform_d;\n\t\t\t\t
@@ -2641,9 +2635,8 @@ VisualEffectResource:
       posRWS = VFXGetPositionRWS(i);\n\t\t\t\tfloat4 posSS = i.VFX_VARYING_POSCS;\n\t\t\t\tPositionInputs
       posInput = GetPositionInput(posSS.xy, _ScreenSize.zw, posSS.z, posSS.w, posRWS,
       tileIndex);\n\t\t\t\t\n\t\t\t\tfloat alpha;\n\t\t\t\tsurfaceData = VFXGetSurfaceData(i,normalWS,uvData,diffusionProfile,alpha);\t\n\t\t\t\tbsdfData
-      = ConvertSurfaceDataToBSDFData(posSS.xy, surfaceData);\n\t\t\t\n\t\t\t#if HDRP_MATERIAL_TYPE_SIMPLE\n\t\t\t\tpreLightData
-      = SimpleGetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t#else\n\t\t\t\tpreLightData
-      = GetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t#endif\n\t\t\t\tpreLightData.diffuseFGD
+      = ConvertSurfaceDataToBSDFData(posSS.xy, surfaceData);\n\t\t\t\n\t\t\t\tpreLightData
+      = GetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t\t\n\t\t\t\tpreLightData.diffuseFGD
       = 1.0f;\n\t\t\t    //TODO: investigate why this is needed\n\t\t\t    preLightData.coatPartLambdaV
       = 0;\n\t\t\t    preLightData.coatIblR = 0;\n\t\t\t    preLightData.coatIblF
       = 0;\n\t\t\t    \n\t\t\t\tbuiltinData = VFXGetBuiltinData(i,posInput,surfaceData,bsdfData,preLightData,uvData,alpha);\n\t\t\t}\n\t\t\t\n\t\t\tvoid
@@ -2703,7 +2696,7 @@ VisualEffectResource:
       indirectBuffer;\t\n\t\t#endif\t\n\t\t\n\t\t#if USE_DEAD_LIST_COUNT\n\t\tByteAddressBuffer
       deadListCount;\n\t\t#endif\n\t\t\n\t\tCBUFFER_START(outputParams)\n\t\t\tfloat
       nbMax;\n\t\t\tfloat systemSeed;\n\t\tCBUFFER_END\n\t\t\n\t\tENDHLSL\n\t\t\n\n\t\t\n\t\t\n\t\t//
-      Forward pass\n\t\tPass\n\t\t{\t\t\n\t\t\tTags { \"LightMode\"=\"Forward\" }\n\t\t\t\t\t\n\t\t\tHLSLPROGRAM\n\t\t\t#pragma
+      Forward pass\n\t\tPass\n\t\t{\t\t\n\t\t\tTags { \"LightMode\"=\"ForwardOnly\"}\n\t\t\t\t\t\n\t\t\tHLSLPROGRAM\n\t\t\t#pragma
       target 4.5\n\t\t\t\n\t\t\t#define UNITY_MATERIAL_LIT\n\t\t\t#define LIGHTLOOP_TILE_PASS\n\t\t\t#define
       _ENABLE_FOG_ON_TRANSPARENT\n\t\t\t#define _DISABLE_DECALS\n\t\t\t#define _BLENDMODE_ALPHA\n\t\t\t#define
       _SURFACE_TYPE_TRANSPARENT\n\t\t\t\n\n\t\t\t#pragma multi_compile USE_FPTL_LIGHTLIST
@@ -2762,35 +2755,35 @@ VisualEffectResource:
       Random:Off channels:XYZ */\n\t\t\t{\n\t\t\t    color = Color;\n\t\t\t}\n\t\t\t\n\n\t\t\t\n\t\t\t#pragma
       vertex vert\n\t\t\tVFX_VARYING_PS_INPUTS vert(uint id : SV_VertexID, uint instanceID
       : SV_InstanceID)\n\t\t\t{\n\t\t\t\tuint index = (id >> 2) + instanceID * 2048;\n\t\t\t\tVFX_VARYING_PS_INPUTS
-      o = (VFX_VARYING_PS_INPUTS)0;\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#if VFX_HAS_INDIRECT_DRAW\n\t\t\t\t\t\t#if
-      USE_DEAD_LIST_COUNT\n\t\t\t\t\t\t\tif (index >= asuint(nbMax) - deadListCount.Load(0))\n\t\t\t\t\t\t\t\treturn
-      o;\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\t\t\t\tindex = indirectBuffer[index];\n\t\t\t\t\t\t\tfloat
-      lifetime = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\t\tfloat3
-      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\t\tfloat3
-      color = float3(1,1,1);\n\t\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\t\tbool
-      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\tfloat3
-      axisX = float3(1,0,0);\n\t\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\t\tfloat3
-      axisZ = float3(0,0,1);\n\t\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\t\tfloat
-      angleY = (float)0;\n\t\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotX = (float)0;\n\t\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotZ = (float)0;\n\t\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\t\tfloat
-      scaleX = (float)1;\n\t\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\t\tfloat
-      scaleZ = (float)1;\n\t\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
-      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#else\n\t\t\t\t\t\t\tif
-      (index >= asuint(nbMax))\n\t\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\tbool
-      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t\tif
-      (!alive)\n\t\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\tfloat lifetime
-      = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\t\tfloat3
-      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\t\tfloat3
-      color = float3(1,1,1);\n\t\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\t\tfloat3
-      axisX = float3(1,0,0);\n\t\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\t\tfloat3
-      axisZ = float3(0,0,1);\n\t\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\t\tfloat
-      angleY = (float)0;\n\t\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotX = (float)0;\n\t\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotZ = (float)0;\n\t\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\t\tfloat
-      scaleX = (float)1;\n\t\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\t\tfloat
-      scaleZ = (float)1;\n\t\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
-      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\tOrient_0(
+      o = (VFX_VARYING_PS_INPUTS)0;\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\tuint deadCount
+      = 0;\n\t\t\t\t\t\t#if USE_DEAD_LIST_COUNT\n\t\t\t\t\t\tdeadCount = deadListCount.Load(0);\n\t\t\t\t\t\t#endif\t\n\t\t\t\t\t\tif
+      (index >= asuint(nbMax) - deadCount)\n\t\t\t\t\t\t\treturn o; // cull\n\t\t\t\t\t\t\n\t\t\t\t\t\t#if
+      VFX_HAS_INDIRECT_DRAW\n\t\t\t\t\t\tindex = indirectBuffer[index];\n\t\t\t\t\t\tfloat
+      lifetime = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\tfloat3
+      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\tfloat3
+      color = float3(1,1,1);\n\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\tbool
+      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\tfloat3
+      axisX = float3(1,0,0);\n\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\tfloat3
+      axisZ = float3(0,0,1);\n\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\tfloat
+      angleY = (float)0;\n\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\tfloat
+      pivotX = (float)0;\n\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\tfloat
+      pivotZ = (float)0;\n\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\tfloat
+      scaleX = (float)1;\n\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\tfloat
+      scaleZ = (float)1;\n\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
+      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#else\n\t\t\t\t\t\tbool
+      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\tif
+      (!alive)\n\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tfloat lifetime
+      = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\tfloat3
+      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\tfloat3
+      color = float3(1,1,1);\n\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\tfloat3
+      axisX = float3(1,0,0);\n\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\tfloat3
+      axisZ = float3(0,0,1);\n\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\tfloat
+      angleY = (float)0;\n\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\tfloat
+      pivotX = (float)0;\n\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\tfloat
+      pivotZ = (float)0;\n\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\tfloat
+      scaleX = (float)1;\n\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\tfloat
+      scaleZ = (float)1;\n\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
+      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\tOrient_0(
       /*inout */axisX,  /*inout */axisY,  /*inout */axisZ);\n\t\t\t\t{\n\t\t\t\t    float
       tmp_y = age / lifetime;\n\t\t\t\t    float tmp_z = SampleCurve(uniform_c,tmp_y);\n\t\t\t\t
       \   float tmp_ba = uniform_b * tmp_z;\n\t\t\t\t    float tmp_bb = tmp_ba * uniform_d;\n\t\t\t\t
@@ -2854,9 +2847,8 @@ VisualEffectResource:
       = VFXGetPositionRWS(i);\n\t\t\t\tfloat4 posSS = i.VFX_VARYING_POSCS;\n\t\t\t\tPositionInputs
       posInput = GetPositionInput(posSS.xy, _ScreenSize.zw, posSS.z, posSS.w, posRWS,
       tileIndex);\n\t\t\t\t\n\t\t\t\tfloat alpha;\n\t\t\t\tsurfaceData = VFXGetSurfaceData(i,normalWS,uvData,diffusionProfile,alpha);\t\n\t\t\t\tbsdfData
-      = ConvertSurfaceDataToBSDFData(posSS.xy, surfaceData);\n\t\t\t\n\t\t\t#if HDRP_MATERIAL_TYPE_SIMPLE\n\t\t\t\tpreLightData
-      = SimpleGetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t#else\n\t\t\t\tpreLightData
-      = GetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t#endif\n\t\t\t\tpreLightData.diffuseFGD
+      = ConvertSurfaceDataToBSDFData(posSS.xy, surfaceData);\n\t\t\t\n\t\t\t\tpreLightData
+      = GetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t\t\n\t\t\t\tpreLightData.diffuseFGD
       = 1.0f;\n\t\t\t    //TODO: investigate why this is needed\n\t\t\t    preLightData.coatPartLambdaV
       = 0;\n\t\t\t    preLightData.coatIblR = 0;\n\t\t\t    preLightData.coatIblF
       = 0;\n\t\t\t    \n\t\t\t\tbuiltinData = VFXGetBuiltinData(i,posInput,surfaceData,bsdfData,preLightData,uvData,alpha);\n\t\t\t}\n\t\t\t\n\t\t\tvoid
@@ -3009,7 +3001,7 @@ VisualEffectResource:
       indirectBuffer;\t\n\t\t#endif\t\n\t\t\n\t\t#if USE_DEAD_LIST_COUNT\n\t\tByteAddressBuffer
       deadListCount;\n\t\t#endif\n\t\t\n\t\tCBUFFER_START(outputParams)\n\t\t\tfloat
       nbMax;\n\t\t\tfloat systemSeed;\n\t\tCBUFFER_END\n\t\t\n\t\tENDHLSL\n\t\t\n\n\t\t\n\t\t\n\t\t//
-      Forward pass\n\t\tPass\n\t\t{\t\t\n\t\t\tTags { \"LightMode\"=\"Forward\" }\n\t\t\t\t\t\n\t\t\tHLSLPROGRAM\n\t\t\t#pragma
+      Forward pass\n\t\tPass\n\t\t{\t\t\n\t\t\tTags { \"LightMode\"=\"ForwardOnly\"}\n\t\t\t\t\t\n\t\t\tHLSLPROGRAM\n\t\t\t#pragma
       target 4.5\n\t\t\t\n\t\t\t#define UNITY_MATERIAL_LIT\n\t\t\t#define LIGHTLOOP_TILE_PASS\n\t\t\t#define
       _ENABLE_FOG_ON_TRANSPARENT\n\t\t\t#define _DISABLE_DECALS\n\t\t\t#define _BLENDMODE_ALPHA\n\t\t\t#define
       _SURFACE_TYPE_TRANSPARENT\n\t\t\t\n\n\t\t\t#pragma multi_compile USE_FPTL_LIGHTLIST
@@ -3068,35 +3060,35 @@ VisualEffectResource:
       Random:Off channels:XYZ */\n\t\t\t{\n\t\t\t    color = Color;\n\t\t\t}\n\t\t\t\n\n\t\t\t\n\t\t\t#pragma
       vertex vert\n\t\t\tVFX_VARYING_PS_INPUTS vert(uint id : SV_VertexID, uint instanceID
       : SV_InstanceID)\n\t\t\t{\n\t\t\t\tuint index = (id >> 2) + instanceID * 2048;\n\t\t\t\tVFX_VARYING_PS_INPUTS
-      o = (VFX_VARYING_PS_INPUTS)0;\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#if VFX_HAS_INDIRECT_DRAW\n\t\t\t\t\t\t#if
-      USE_DEAD_LIST_COUNT\n\t\t\t\t\t\t\tif (index >= asuint(nbMax) - deadListCount.Load(0))\n\t\t\t\t\t\t\t\treturn
-      o;\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\t\t\t\tindex = indirectBuffer[index];\n\t\t\t\t\t\t\tfloat
-      lifetime = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\t\tfloat3
-      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\t\tfloat3
-      color = float3(1,1,1);\n\t\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\t\tbool
-      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\tfloat3
-      axisX = float3(1,0,0);\n\t\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\t\tfloat3
-      axisZ = float3(0,0,1);\n\t\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\t\tfloat
-      angleY = (float)0;\n\t\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotX = (float)0;\n\t\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotZ = (float)0;\n\t\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\t\tfloat
-      scaleX = (float)1;\n\t\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\t\tfloat
-      scaleZ = (float)1;\n\t\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
-      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#else\n\t\t\t\t\t\t\tif
-      (index >= asuint(nbMax))\n\t\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\tbool
-      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t\tif
-      (!alive)\n\t\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\tfloat lifetime
-      = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\t\tfloat3
-      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\t\tfloat3
-      color = float3(1,1,1);\n\t\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\t\tfloat3
-      axisX = float3(1,0,0);\n\t\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\t\tfloat3
-      axisZ = float3(0,0,1);\n\t\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\t\tfloat
-      angleY = (float)0;\n\t\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotX = (float)0;\n\t\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotZ = (float)0;\n\t\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\t\tfloat
-      scaleX = (float)1;\n\t\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\t\tfloat
-      scaleZ = (float)1;\n\t\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
-      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\tOrient_0(
+      o = (VFX_VARYING_PS_INPUTS)0;\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\tuint deadCount
+      = 0;\n\t\t\t\t\t\t#if USE_DEAD_LIST_COUNT\n\t\t\t\t\t\tdeadCount = deadListCount.Load(0);\n\t\t\t\t\t\t#endif\t\n\t\t\t\t\t\tif
+      (index >= asuint(nbMax) - deadCount)\n\t\t\t\t\t\t\treturn o; // cull\n\t\t\t\t\t\t\n\t\t\t\t\t\t#if
+      VFX_HAS_INDIRECT_DRAW\n\t\t\t\t\t\tindex = indirectBuffer[index];\n\t\t\t\t\t\tfloat
+      lifetime = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\tfloat3
+      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\tfloat3
+      color = float3(1,1,1);\n\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\tbool
+      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\tfloat3
+      axisX = float3(1,0,0);\n\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\tfloat3
+      axisZ = float3(0,0,1);\n\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\tfloat
+      angleY = (float)0;\n\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\tfloat
+      pivotX = (float)0;\n\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\tfloat
+      pivotZ = (float)0;\n\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\tfloat
+      scaleX = (float)1;\n\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\tfloat
+      scaleZ = (float)1;\n\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
+      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#else\n\t\t\t\t\t\tbool
+      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\tif
+      (!alive)\n\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tfloat lifetime
+      = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\tfloat3
+      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\tfloat3
+      color = float3(1,1,1);\n\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\tfloat3
+      axisX = float3(1,0,0);\n\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\tfloat3
+      axisZ = float3(0,0,1);\n\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\tfloat
+      angleY = (float)0;\n\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\tfloat
+      pivotX = (float)0;\n\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\tfloat
+      pivotZ = (float)0;\n\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\tfloat
+      scaleX = (float)1;\n\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\tfloat
+      scaleZ = (float)1;\n\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
+      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\tOrient_0(
       /*inout */axisX,  /*inout */axisY,  /*inout */axisZ);\n\t\t\t\t{\n\t\t\t\t    float
       tmp_y = age / lifetime;\n\t\t\t\t    float tmp_z = SampleCurve(uniform_c,tmp_y);\n\t\t\t\t
       \   float tmp_ba = uniform_b * tmp_z;\n\t\t\t\t    float tmp_bb = tmp_ba * uniform_d;\n\t\t\t\t
@@ -3161,9 +3153,8 @@ VisualEffectResource:
       posRWS = VFXGetPositionRWS(i);\n\t\t\t\tfloat4 posSS = i.VFX_VARYING_POSCS;\n\t\t\t\tPositionInputs
       posInput = GetPositionInput(posSS.xy, _ScreenSize.zw, posSS.z, posSS.w, posRWS,
       tileIndex);\n\t\t\t\t\n\t\t\t\tfloat alpha;\n\t\t\t\tsurfaceData = VFXGetSurfaceData(i,normalWS,uvData,diffusionProfile,alpha);\t\n\t\t\t\tbsdfData
-      = ConvertSurfaceDataToBSDFData(posSS.xy, surfaceData);\n\t\t\t\n\t\t\t#if HDRP_MATERIAL_TYPE_SIMPLE\n\t\t\t\tpreLightData
-      = SimpleGetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t#else\n\t\t\t\tpreLightData
-      = GetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t#endif\n\t\t\t\tpreLightData.diffuseFGD
+      = ConvertSurfaceDataToBSDFData(posSS.xy, surfaceData);\n\t\t\t\n\t\t\t\tpreLightData
+      = GetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t\t\n\t\t\t\tpreLightData.diffuseFGD
       = 1.0f;\n\t\t\t    //TODO: investigate why this is needed\n\t\t\t    preLightData.coatPartLambdaV
       = 0;\n\t\t\t    preLightData.coatIblR = 0;\n\t\t\t    preLightData.coatIblF
       = 0;\n\t\t\t    \n\t\t\t\tbuiltinData = VFXGetBuiltinData(i,posInput,surfaceData,bsdfData,preLightData,uvData,alpha);\n\t\t\t}\n\t\t\t\n\t\t\tvoid
@@ -3223,7 +3214,7 @@ VisualEffectResource:
       indirectBuffer;\t\n\t\t#endif\t\n\t\t\n\t\t#if USE_DEAD_LIST_COUNT\n\t\tByteAddressBuffer
       deadListCount;\n\t\t#endif\n\t\t\n\t\tCBUFFER_START(outputParams)\n\t\t\tfloat
       nbMax;\n\t\t\tfloat systemSeed;\n\t\tCBUFFER_END\n\t\t\n\t\tENDHLSL\n\t\t\n\n\t\t\n\t\t\n\t\t//
-      Forward pass\n\t\tPass\n\t\t{\t\t\n\t\t\tTags { \"LightMode\"=\"Forward\" }\n\t\t\t\t\t\n\t\t\tHLSLPROGRAM\n\t\t\t#pragma
+      Forward pass\n\t\tPass\n\t\t{\t\t\n\t\t\tTags { \"LightMode\"=\"ForwardOnly\"}\n\t\t\t\t\t\n\t\t\tHLSLPROGRAM\n\t\t\t#pragma
       target 4.5\n\t\t\t\n\t\t\t#define UNITY_MATERIAL_LIT\n\t\t\t#define LIGHTLOOP_TILE_PASS\n\t\t\t#define
       _ENABLE_FOG_ON_TRANSPARENT\n\t\t\t#define _DISABLE_DECALS\n\t\t\t#define _BLENDMODE_ALPHA\n\t\t\t#define
       _SURFACE_TYPE_TRANSPARENT\n\t\t\t\n\n\t\t\t#pragma multi_compile USE_FPTL_LIGHTLIST
@@ -3282,35 +3273,35 @@ VisualEffectResource:
       Random:Off channels:XYZ */\n\t\t\t{\n\t\t\t    color = Color;\n\t\t\t}\n\t\t\t\n\n\t\t\t\n\t\t\t#pragma
       vertex vert\n\t\t\tVFX_VARYING_PS_INPUTS vert(uint id : SV_VertexID, uint instanceID
       : SV_InstanceID)\n\t\t\t{\n\t\t\t\tuint index = (id >> 2) + instanceID * 2048;\n\t\t\t\tVFX_VARYING_PS_INPUTS
-      o = (VFX_VARYING_PS_INPUTS)0;\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#if VFX_HAS_INDIRECT_DRAW\n\t\t\t\t\t\t#if
-      USE_DEAD_LIST_COUNT\n\t\t\t\t\t\t\tif (index >= asuint(nbMax) - deadListCount.Load(0))\n\t\t\t\t\t\t\t\treturn
-      o;\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\t\t\t\tindex = indirectBuffer[index];\n\t\t\t\t\t\t\tfloat
-      lifetime = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\t\tfloat3
-      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\t\tfloat3
-      color = float3(1,1,1);\n\t\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\t\tbool
-      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\tfloat3
-      axisX = float3(1,0,0);\n\t\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\t\tfloat3
-      axisZ = float3(0,0,1);\n\t\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\t\tfloat
-      angleY = (float)0;\n\t\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotX = (float)0;\n\t\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotZ = (float)0;\n\t\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\t\tfloat
-      scaleX = (float)1;\n\t\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\t\tfloat
-      scaleZ = (float)1;\n\t\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
-      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#else\n\t\t\t\t\t\t\tif
-      (index >= asuint(nbMax))\n\t\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\tbool
-      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t\tif
-      (!alive)\n\t\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\tfloat lifetime
-      = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\t\tfloat3
-      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\t\tfloat3
-      color = float3(1,1,1);\n\t\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\t\tfloat3
-      axisX = float3(1,0,0);\n\t\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\t\tfloat3
-      axisZ = float3(0,0,1);\n\t\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\t\tfloat
-      angleY = (float)0;\n\t\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotX = (float)0;\n\t\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotZ = (float)0;\n\t\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\t\tfloat
-      scaleX = (float)1;\n\t\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\t\tfloat
-      scaleZ = (float)1;\n\t\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
-      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\tOrient_0(
+      o = (VFX_VARYING_PS_INPUTS)0;\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\tuint deadCount
+      = 0;\n\t\t\t\t\t\t#if USE_DEAD_LIST_COUNT\n\t\t\t\t\t\tdeadCount = deadListCount.Load(0);\n\t\t\t\t\t\t#endif\t\n\t\t\t\t\t\tif
+      (index >= asuint(nbMax) - deadCount)\n\t\t\t\t\t\t\treturn o; // cull\n\t\t\t\t\t\t\n\t\t\t\t\t\t#if
+      VFX_HAS_INDIRECT_DRAW\n\t\t\t\t\t\tindex = indirectBuffer[index];\n\t\t\t\t\t\tfloat
+      lifetime = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\tfloat3
+      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\tfloat3
+      color = float3(1,1,1);\n\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\tbool
+      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\tfloat3
+      axisX = float3(1,0,0);\n\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\tfloat3
+      axisZ = float3(0,0,1);\n\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\tfloat
+      angleY = (float)0;\n\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\tfloat
+      pivotX = (float)0;\n\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\tfloat
+      pivotZ = (float)0;\n\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\tfloat
+      scaleX = (float)1;\n\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\tfloat
+      scaleZ = (float)1;\n\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
+      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#else\n\t\t\t\t\t\tbool
+      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\tif
+      (!alive)\n\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tfloat lifetime
+      = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\tfloat3
+      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\tfloat3
+      color = float3(1,1,1);\n\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\tfloat3
+      axisX = float3(1,0,0);\n\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\tfloat3
+      axisZ = float3(0,0,1);\n\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\tfloat
+      angleY = (float)0;\n\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\tfloat
+      pivotX = (float)0;\n\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\tfloat
+      pivotZ = (float)0;\n\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\tfloat
+      scaleX = (float)1;\n\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\tfloat
+      scaleZ = (float)1;\n\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
+      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\tOrient_0(
       /*inout */axisX,  /*inout */axisY,  /*inout */axisZ);\n\t\t\t\t{\n\t\t\t\t    float
       tmp_y = age / lifetime;\n\t\t\t\t    float tmp_z = SampleCurve(uniform_c,tmp_y);\n\t\t\t\t
       \   float tmp_ba = uniform_b * tmp_z;\n\t\t\t\t    float tmp_bb = tmp_ba * uniform_d;\n\t\t\t\t
@@ -3374,9 +3365,8 @@ VisualEffectResource:
       = VFXGetPositionRWS(i);\n\t\t\t\tfloat4 posSS = i.VFX_VARYING_POSCS;\n\t\t\t\tPositionInputs
       posInput = GetPositionInput(posSS.xy, _ScreenSize.zw, posSS.z, posSS.w, posRWS,
       tileIndex);\n\t\t\t\t\n\t\t\t\tfloat alpha;\n\t\t\t\tsurfaceData = VFXGetSurfaceData(i,normalWS,uvData,diffusionProfile,alpha);\t\n\t\t\t\tbsdfData
-      = ConvertSurfaceDataToBSDFData(posSS.xy, surfaceData);\n\t\t\t\n\t\t\t#if HDRP_MATERIAL_TYPE_SIMPLE\n\t\t\t\tpreLightData
-      = SimpleGetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t#else\n\t\t\t\tpreLightData
-      = GetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t#endif\n\t\t\t\tpreLightData.diffuseFGD
+      = ConvertSurfaceDataToBSDFData(posSS.xy, surfaceData);\n\t\t\t\n\t\t\t\tpreLightData
+      = GetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t\t\n\t\t\t\tpreLightData.diffuseFGD
       = 1.0f;\n\t\t\t    //TODO: investigate why this is needed\n\t\t\t    preLightData.coatPartLambdaV
       = 0;\n\t\t\t    preLightData.coatIblR = 0;\n\t\t\t    preLightData.coatIblF
       = 0;\n\t\t\t    \n\t\t\t\tbuiltinData = VFXGetBuiltinData(i,posInput,surfaceData,bsdfData,preLightData,uvData,alpha);\n\t\t\t}\n\t\t\t\n\t\t\tvoid
@@ -3528,7 +3518,7 @@ VisualEffectResource:
       indirectBuffer;\t\n\t\t#endif\t\n\t\t\n\t\t#if USE_DEAD_LIST_COUNT\n\t\tByteAddressBuffer
       deadListCount;\n\t\t#endif\n\t\t\n\t\tCBUFFER_START(outputParams)\n\t\t\tfloat
       nbMax;\n\t\t\tfloat systemSeed;\n\t\tCBUFFER_END\n\t\t\n\t\tENDHLSL\n\t\t\n\n\t\t\n\t\t\n\t\t//
-      Forward pass\n\t\tPass\n\t\t{\t\t\n\t\t\tTags { \"LightMode\"=\"Forward\" }\n\t\t\t\t\t\n\t\t\tHLSLPROGRAM\n\t\t\t#pragma
+      Forward pass\n\t\tPass\n\t\t{\t\t\n\t\t\tTags { \"LightMode\"=\"ForwardOnly\"}\n\t\t\t\t\t\n\t\t\tHLSLPROGRAM\n\t\t\t#pragma
       target 4.5\n\t\t\t\n\t\t\t#define UNITY_MATERIAL_LIT\n\t\t\t#define LIGHTLOOP_TILE_PASS\n\t\t\t#define
       _ENABLE_FOG_ON_TRANSPARENT\n\t\t\t#define _DISABLE_DECALS\n\t\t\t#define _BLENDMODE_ALPHA\n\t\t\t#define
       _SURFACE_TYPE_TRANSPARENT\n\t\t\t\n\n\t\t\t#pragma multi_compile USE_FPTL_LIGHTLIST
@@ -3587,35 +3577,35 @@ VisualEffectResource:
       Random:Off channels:XYZ */\n\t\t\t{\n\t\t\t    color = Color;\n\t\t\t}\n\t\t\t\n\n\t\t\t\n\t\t\t#pragma
       vertex vert\n\t\t\tVFX_VARYING_PS_INPUTS vert(uint id : SV_VertexID, uint instanceID
       : SV_InstanceID)\n\t\t\t{\n\t\t\t\tuint index = (id >> 2) + instanceID * 2048;\n\t\t\t\tVFX_VARYING_PS_INPUTS
-      o = (VFX_VARYING_PS_INPUTS)0;\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#if VFX_HAS_INDIRECT_DRAW\n\t\t\t\t\t\t#if
-      USE_DEAD_LIST_COUNT\n\t\t\t\t\t\t\tif (index >= asuint(nbMax) - deadListCount.Load(0))\n\t\t\t\t\t\t\t\treturn
-      o;\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\t\t\t\tindex = indirectBuffer[index];\n\t\t\t\t\t\t\tfloat
-      lifetime = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\t\tfloat3
-      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\t\tfloat3
-      color = float3(1,1,1);\n\t\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\t\tbool
-      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\tfloat3
-      axisX = float3(1,0,0);\n\t\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\t\tfloat3
-      axisZ = float3(0,0,1);\n\t\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\t\tfloat
-      angleY = (float)0;\n\t\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotX = (float)0;\n\t\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotZ = (float)0;\n\t\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\t\tfloat
-      scaleX = (float)1;\n\t\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\t\tfloat
-      scaleZ = (float)1;\n\t\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
-      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#else\n\t\t\t\t\t\t\tif
-      (index >= asuint(nbMax))\n\t\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\tbool
-      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t\tif
-      (!alive)\n\t\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\tfloat lifetime
-      = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\t\tfloat3
-      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\t\tfloat3
-      color = float3(1,1,1);\n\t\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\t\tfloat3
-      axisX = float3(1,0,0);\n\t\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\t\tfloat3
-      axisZ = float3(0,0,1);\n\t\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\t\tfloat
-      angleY = (float)0;\n\t\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotX = (float)0;\n\t\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotZ = (float)0;\n\t\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\t\tfloat
-      scaleX = (float)1;\n\t\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\t\tfloat
-      scaleZ = (float)1;\n\t\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
-      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\tOrient_0(
+      o = (VFX_VARYING_PS_INPUTS)0;\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\tuint deadCount
+      = 0;\n\t\t\t\t\t\t#if USE_DEAD_LIST_COUNT\n\t\t\t\t\t\tdeadCount = deadListCount.Load(0);\n\t\t\t\t\t\t#endif\t\n\t\t\t\t\t\tif
+      (index >= asuint(nbMax) - deadCount)\n\t\t\t\t\t\t\treturn o; // cull\n\t\t\t\t\t\t\n\t\t\t\t\t\t#if
+      VFX_HAS_INDIRECT_DRAW\n\t\t\t\t\t\tindex = indirectBuffer[index];\n\t\t\t\t\t\tfloat
+      lifetime = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\tfloat3
+      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\tfloat3
+      color = float3(1,1,1);\n\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\tbool
+      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\tfloat3
+      axisX = float3(1,0,0);\n\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\tfloat3
+      axisZ = float3(0,0,1);\n\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\tfloat
+      angleY = (float)0;\n\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\tfloat
+      pivotX = (float)0;\n\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\tfloat
+      pivotZ = (float)0;\n\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\tfloat
+      scaleX = (float)1;\n\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\tfloat
+      scaleZ = (float)1;\n\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
+      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#else\n\t\t\t\t\t\tbool
+      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\tif
+      (!alive)\n\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tfloat lifetime
+      = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\tfloat3
+      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\tfloat3
+      color = float3(1,1,1);\n\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\tfloat3
+      axisX = float3(1,0,0);\n\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\tfloat3
+      axisZ = float3(0,0,1);\n\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\tfloat
+      angleY = (float)0;\n\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\tfloat
+      pivotX = (float)0;\n\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\tfloat
+      pivotZ = (float)0;\n\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\tfloat
+      scaleX = (float)1;\n\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\tfloat
+      scaleZ = (float)1;\n\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
+      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\tOrient_0(
       /*inout */axisX,  /*inout */axisY,  /*inout */axisZ);\n\t\t\t\t{\n\t\t\t\t    float
       tmp_y = age / lifetime;\n\t\t\t\t    float tmp_z = SampleCurve(uniform_c,tmp_y);\n\t\t\t\t
       \   float tmp_ba = uniform_b * tmp_z;\n\t\t\t\t    float tmp_bb = tmp_ba * uniform_d;\n\t\t\t\t
@@ -3680,9 +3670,8 @@ VisualEffectResource:
       posRWS = VFXGetPositionRWS(i);\n\t\t\t\tfloat4 posSS = i.VFX_VARYING_POSCS;\n\t\t\t\tPositionInputs
       posInput = GetPositionInput(posSS.xy, _ScreenSize.zw, posSS.z, posSS.w, posRWS,
       tileIndex);\n\t\t\t\t\n\t\t\t\tfloat alpha;\n\t\t\t\tsurfaceData = VFXGetSurfaceData(i,normalWS,uvData,diffusionProfile,alpha);\t\n\t\t\t\tbsdfData
-      = ConvertSurfaceDataToBSDFData(posSS.xy, surfaceData);\n\t\t\t\n\t\t\t#if HDRP_MATERIAL_TYPE_SIMPLE\n\t\t\t\tpreLightData
-      = SimpleGetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t#else\n\t\t\t\tpreLightData
-      = GetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t#endif\n\t\t\t\tpreLightData.diffuseFGD
+      = ConvertSurfaceDataToBSDFData(posSS.xy, surfaceData);\n\t\t\t\n\t\t\t\tpreLightData
+      = GetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t\t\n\t\t\t\tpreLightData.diffuseFGD
       = 1.0f;\n\t\t\t    //TODO: investigate why this is needed\n\t\t\t    preLightData.coatPartLambdaV
       = 0;\n\t\t\t    preLightData.coatIblR = 0;\n\t\t\t    preLightData.coatIblF
       = 0;\n\t\t\t    \n\t\t\t\tbuiltinData = VFXGetBuiltinData(i,posInput,surfaceData,bsdfData,preLightData,uvData,alpha);\n\t\t\t}\n\t\t\t\n\t\t\tvoid
@@ -3741,7 +3730,7 @@ VisualEffectResource:
       indirectBuffer;\t\n\t\t#endif\t\n\t\t\n\t\t#if USE_DEAD_LIST_COUNT\n\t\tByteAddressBuffer
       deadListCount;\n\t\t#endif\n\t\t\n\t\tCBUFFER_START(outputParams)\n\t\t\tfloat
       nbMax;\n\t\t\tfloat systemSeed;\n\t\tCBUFFER_END\n\t\t\n\t\tENDHLSL\n\t\t\n\n\t\t\n\t\t\n\t\t//
-      Forward pass\n\t\tPass\n\t\t{\t\t\n\t\t\tTags { \"LightMode\"=\"Forward\" }\n\t\t\t\t\t\n\t\t\tHLSLPROGRAM\n\t\t\t#pragma
+      Forward pass\n\t\tPass\n\t\t{\t\t\n\t\t\tTags { \"LightMode\"=\"ForwardOnly\"}\n\t\t\t\t\t\n\t\t\tHLSLPROGRAM\n\t\t\t#pragma
       target 4.5\n\t\t\t\n\t\t\t#define UNITY_MATERIAL_LIT\n\t\t\t#define LIGHTLOOP_TILE_PASS\n\t\t\t#define
       _ENABLE_FOG_ON_TRANSPARENT\n\t\t\t#define _DISABLE_DECALS\n\t\t\t#define _BLENDMODE_ALPHA\n\t\t\t#define
       _SURFACE_TYPE_TRANSPARENT\n\t\t\t\n\n\t\t\t#pragma multi_compile USE_FPTL_LIGHTLIST
@@ -3800,35 +3789,35 @@ VisualEffectResource:
       Random:Off channels:XYZ */\n\t\t\t{\n\t\t\t    color = Color;\n\t\t\t}\n\t\t\t\n\n\t\t\t\n\t\t\t#pragma
       vertex vert\n\t\t\tVFX_VARYING_PS_INPUTS vert(uint id : SV_VertexID, uint instanceID
       : SV_InstanceID)\n\t\t\t{\n\t\t\t\tuint index = (id >> 2) + instanceID * 2048;\n\t\t\t\tVFX_VARYING_PS_INPUTS
-      o = (VFX_VARYING_PS_INPUTS)0;\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#if VFX_HAS_INDIRECT_DRAW\n\t\t\t\t\t\t#if
-      USE_DEAD_LIST_COUNT\n\t\t\t\t\t\t\tif (index >= asuint(nbMax) - deadListCount.Load(0))\n\t\t\t\t\t\t\t\treturn
-      o;\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\t\t\t\tindex = indirectBuffer[index];\n\t\t\t\t\t\t\tfloat
-      lifetime = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\t\tfloat3
-      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\t\tfloat3
-      color = float3(1,1,1);\n\t\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\t\tbool
-      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\tfloat3
-      axisX = float3(1,0,0);\n\t\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\t\tfloat3
-      axisZ = float3(0,0,1);\n\t\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\t\tfloat
-      angleY = (float)0;\n\t\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotX = (float)0;\n\t\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotZ = (float)0;\n\t\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\t\tfloat
-      scaleX = (float)1;\n\t\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\t\tfloat
-      scaleZ = (float)1;\n\t\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
-      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#else\n\t\t\t\t\t\t\tif
-      (index >= asuint(nbMax))\n\t\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\tbool
-      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t\tif
-      (!alive)\n\t\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\tfloat lifetime
-      = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\t\tfloat3
-      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\t\tfloat3
-      color = float3(1,1,1);\n\t\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\t\tfloat3
-      axisX = float3(1,0,0);\n\t\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\t\tfloat3
-      axisZ = float3(0,0,1);\n\t\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\t\tfloat
-      angleY = (float)0;\n\t\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotX = (float)0;\n\t\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\t\tfloat
-      pivotZ = (float)0;\n\t\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\t\tfloat
-      scaleX = (float)1;\n\t\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\t\tfloat
-      scaleZ = (float)1;\n\t\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
-      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\tOrient_0(
+      o = (VFX_VARYING_PS_INPUTS)0;\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\tuint deadCount
+      = 0;\n\t\t\t\t\t\t#if USE_DEAD_LIST_COUNT\n\t\t\t\t\t\tdeadCount = deadListCount.Load(0);\n\t\t\t\t\t\t#endif\t\n\t\t\t\t\t\tif
+      (index >= asuint(nbMax) - deadCount)\n\t\t\t\t\t\t\treturn o; // cull\n\t\t\t\t\t\t\n\t\t\t\t\t\t#if
+      VFX_HAS_INDIRECT_DRAW\n\t\t\t\t\t\tindex = indirectBuffer[index];\n\t\t\t\t\t\tfloat
+      lifetime = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\tfloat3
+      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\tfloat3
+      color = float3(1,1,1);\n\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\tbool
+      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\tfloat3
+      axisX = float3(1,0,0);\n\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\tfloat3
+      axisZ = float3(0,0,1);\n\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\tfloat
+      angleY = (float)0;\n\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\tfloat
+      pivotX = (float)0;\n\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\tfloat
+      pivotZ = (float)0;\n\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\tfloat
+      scaleX = (float)1;\n\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\tfloat
+      scaleZ = (float)1;\n\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
+      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#else\n\t\t\t\t\t\tbool
+      alive = (attributeBuffer.Load((index * 0x2 + 0x5000) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\tif
+      (!alive)\n\t\t\t\t\t\t\treturn o;\n\t\t\t\t\t\t\t\n\t\t\t\t\t\tfloat lifetime
+      = asfloat(attributeBuffer.Load((index * 0x1 + 0x0) << 2));\n\t\t\t\t\t\tfloat3
+      position = asfloat(attributeBuffer.Load3((index * 0x4 + 0x1000) << 2));\n\t\t\t\t\t\tfloat3
+      color = float3(1,1,1);\n\t\t\t\t\t\tfloat alpha = (float)1;\n\t\t\t\t\t\tfloat3
+      axisX = float3(1,0,0);\n\t\t\t\t\t\tfloat3 axisY = float3(0,1,0);\n\t\t\t\t\t\tfloat3
+      axisZ = float3(0,0,1);\n\t\t\t\t\t\tfloat angleX = (float)0;\n\t\t\t\t\t\tfloat
+      angleY = (float)0;\n\t\t\t\t\t\tfloat angleZ = (float)0;\n\t\t\t\t\t\tfloat
+      pivotX = (float)0;\n\t\t\t\t\t\tfloat pivotY = (float)0;\n\t\t\t\t\t\tfloat
+      pivotZ = (float)0;\n\t\t\t\t\t\tfloat size = (float)0.1;\n\t\t\t\t\t\tfloat
+      scaleX = (float)1;\n\t\t\t\t\t\tfloat scaleY = (float)1;\n\t\t\t\t\t\tfloat
+      scaleZ = (float)1;\n\t\t\t\t\t\tfloat age = asfloat(attributeBuffer.Load((index
+      * 0x2 + 0x5001) << 2));\n\t\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\t#endif\n\t\t\t\t\t\t\n\t\t\t\tOrient_0(
       /*inout */axisX,  /*inout */axisY,  /*inout */axisZ);\n\t\t\t\t{\n\t\t\t\t    float
       tmp_y = age / lifetime;\n\t\t\t\t    float tmp_z = SampleCurve(uniform_c,tmp_y);\n\t\t\t\t
       \   float tmp_ba = uniform_b * tmp_z;\n\t\t\t\t    float tmp_bb = tmp_ba * uniform_d;\n\t\t\t\t
@@ -3892,9 +3881,8 @@ VisualEffectResource:
       = VFXGetPositionRWS(i);\n\t\t\t\tfloat4 posSS = i.VFX_VARYING_POSCS;\n\t\t\t\tPositionInputs
       posInput = GetPositionInput(posSS.xy, _ScreenSize.zw, posSS.z, posSS.w, posRWS,
       tileIndex);\n\t\t\t\t\n\t\t\t\tfloat alpha;\n\t\t\t\tsurfaceData = VFXGetSurfaceData(i,normalWS,uvData,diffusionProfile,alpha);\t\n\t\t\t\tbsdfData
-      = ConvertSurfaceDataToBSDFData(posSS.xy, surfaceData);\n\t\t\t\n\t\t\t#if HDRP_MATERIAL_TYPE_SIMPLE\n\t\t\t\tpreLightData
-      = SimpleGetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t#else\n\t\t\t\tpreLightData
-      = GetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t#endif\n\t\t\t\tpreLightData.diffuseFGD
+      = ConvertSurfaceDataToBSDFData(posSS.xy, surfaceData);\n\t\t\t\n\t\t\t\tpreLightData
+      = GetPreLightData(GetWorldSpaceNormalizeViewDir(posRWS),posInput,bsdfData);\n\t\t\t\t\n\t\t\t\tpreLightData.diffuseFGD
       = 1.0f;\n\t\t\t    //TODO: investigate why this is needed\n\t\t\t    preLightData.coatPartLambdaV
       = 0;\n\t\t\t    preLightData.coatIblR = 0;\n\t\t\t    preLightData.coatIblF
       = 0;\n\t\t\t    \n\t\t\t\tbuiltinData = VFXGetBuiltinData(i,posInput,surfaceData,bsdfData,preLightData,uvData,alpha);\n\t\t\t}\n\t\t\t\n\t\t\tvoid
