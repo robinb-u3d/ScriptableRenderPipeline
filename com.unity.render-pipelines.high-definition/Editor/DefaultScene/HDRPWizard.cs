@@ -13,7 +13,6 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
 {
     public class HDWizard : EditorWindow
     {
-
         //reflect internal legacy enum
         enum LightmapEncodingQualityCopy
         {
@@ -36,6 +35,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             public static readonly GUIContent resolve = EditorGUIUtility.TrTextContent("Fix");
             public static readonly GUIContent resolveAll = EditorGUIUtility.TrTextContent("Fix All");
             public static readonly GUIContent resolveAllQuality = EditorGUIUtility.TrTextContent("Fix All Qualities");
+            public static readonly GUIContent resolveCurrentQuality = EditorGUIUtility.TrTextContent("Fix Current Quality");
             public static readonly GUIContent allConfigurationLabel = EditorGUIUtility.TrTextContent("HDRP configuration");
             public const string allConfigurationError = "There is issue in your configuration. (See below for detail)";
             public static readonly GUIContent colorSpaceLabel = EditorGUIUtility.TrTextContent("Color space");
@@ -70,7 +70,6 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
 
         static Func<BuildTargetGroup, LightmapEncodingQualityCopy> GetLightmapEncodingQualityForPlatformGroup;
         static Action<BuildTargetGroup, LightmapEncodingQualityCopy> SetLightmapEncodingQualityForPlatformGroup;
-        static Func<BuildTargetGroup[]> getBuildTargetGroups;
 
         static HDWizard()
         {
@@ -139,7 +138,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             EditorGUILayout.Space();
             DrawConfigInfo();
             
-            EditorGUILayout.Space();
+            GUILayout.FlexibleSpace();
             EditorGUI.BeginChangeCheck();
             bool changedHaveStatPopup = EditorGUILayout.Toggle(Style.haveStartPopup, HDProjectSettings.haveStartPopup);
             if (EditorGUI.EndChangeCheck())
@@ -247,9 +246,20 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
 
         bool lightmapTester()
         {
-            return false;
+            // Shame alert: plateform supporting Encodement are partly hardcoded
+            // in editor (Standalone) and for the other part, it is all in internal code.
+            return GetLightmapEncodingQualityForPlatformGroup(BuildTargetGroup.Standalone) == LightmapEncodingQualityCopy.High
+                && GetLightmapEncodingQualityForPlatformGroup(BuildTargetGroup.Android) == LightmapEncodingQualityCopy.High
+                && GetLightmapEncodingQualityForPlatformGroup(BuildTargetGroup.Lumin) == LightmapEncodingQualityCopy.High
+                && GetLightmapEncodingQualityForPlatformGroup(BuildTargetGroup.WSA) == LightmapEncodingQualityCopy.High;
         }
-        void lightmapResolver() => PlayerSettings.colorSpace = ColorSpace.Linear; //TODO
+        void lightmapResolver()
+        {
+            SetLightmapEncodingQualityForPlatformGroup(BuildTargetGroup.Standalone, LightmapEncodingQualityCopy.High);
+            SetLightmapEncodingQualityForPlatformGroup(BuildTargetGroup.Android, LightmapEncodingQualityCopy.High);
+            SetLightmapEncodingQualityForPlatformGroup(BuildTargetGroup.Lumin, LightmapEncodingQualityCopy.High);
+            SetLightmapEncodingQualityForPlatformGroup(BuildTargetGroup.WSA, LightmapEncodingQualityCopy.High);
+        }
 
         bool shadowTester()
         {
@@ -321,10 +331,14 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
         {
             if (!hdrpAssetUsedTester())
                 hdrpAssetUsedResolver();
+
             //ask to use one or create one
         }
 
-        bool defaultVolumeProfileTester() => PlayerSettings.colorSpace == ColorSpace.Linear;
-        void defaultVolumeProfileResolver() => PlayerSettings.colorSpace = ColorSpace.Linear;
+        bool defaultVolumeProfileTester() => HDProjectSettings.defaultVolumeProfile != null;
+        void defaultVolumeProfileResolver()
+        {
+            //ask to use one
+        }
     }
 }
