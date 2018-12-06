@@ -30,35 +30,36 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             public static readonly GUIContent haveStartPopup = EditorGUIUtility.TrTextContent("Show on start");
 
             //configuration debugger
-            public static readonly GUIContent ok = EditorGUIUtility.TrTextContent("OK");
+            public static readonly GUIContent ok = EditorGUIUtility.TrIconContent("Collab");
+            public static readonly GUIContent fail = EditorGUIUtility.TrIconContent("CollabError");
             public static readonly GUIContent okForCurrentQuality = EditorGUIUtility.TrTextContent("OK for the current quality settings.");
             public static readonly GUIContent resolve = EditorGUIUtility.TrTextContent("Fix");
             public static readonly GUIContent resolveAll = EditorGUIUtility.TrTextContent("Fix All");
             public static readonly GUIContent resolveAllQuality = EditorGUIUtility.TrTextContent("Fix All Qualities");
             public static readonly GUIContent allConfigurationLabel = EditorGUIUtility.TrTextContent("HDRP configuration");
-            public static readonly GUIContent allConfigurationError = EditorGUIUtility.TrTextContent("There is issue in your configuration. (See below for detail)");
+            public const string allConfigurationError = "There is issue in your configuration. (See below for detail)";
             public static readonly GUIContent colorSpaceLabel = EditorGUIUtility.TrTextContent("Color space");
-            public static readonly GUIContent colorSpaceError = EditorGUIUtility.TrTextContent("Only linear color space supported!");
+            public const string colorSpaceError = "Only linear color space supported!";
             public static readonly GUIContent lightmapLabel = EditorGUIUtility.TrTextContent("Lightmap encoding");
-            public static readonly GUIContent lightmapError = EditorGUIUtility.TrTextContent("Only high quality lightmap supported!");
+            public const string lightmapError = "Only high quality lightmap supported!";
             public static readonly GUIContent shadowLabel = EditorGUIUtility.TrTextContent("Shadows");
-            public static readonly GUIContent shadowError = EditorGUIUtility.TrTextContent("Shadow must be set to activated! (either on hard or soft)");
+            public const string shadowError = "Shadow must be set to activated! (either on hard or soft)";
             public static readonly GUIContent shadowMaskLabel = EditorGUIUtility.TrTextContent("Shadowmask mode");
-            public static readonly GUIContent shadowMaskError = EditorGUIUtility.TrTextContent("Only distance shadowmask supported at the project level! (You can still change this per light.)");
+            public const string shadowMaskError = "Only distance shadowmask supported at the project level! (You can still change this per light.)";
             public static readonly GUIContent scriptingRuntimeVersionLabel = EditorGUIUtility.TrTextContent("Script runtime version");
-            public static readonly GUIContent scriptingRuntimeVersionError = EditorGUIUtility.TrTextContent("Script runtime version must be .Net 4.x or earlier!");
+            public const string scriptingRuntimeVersionError = "Script runtime version must be .Net 4.x or earlier!";
             public static readonly GUIContent hdrpAssetLabel = EditorGUIUtility.TrTextContent("Asset configuration");
-            public static readonly GUIContent hdrpAssetError = EditorGUIUtility.TrTextContent("There are issues in the HDRP asset configuration. (see below)");
+            public const string hdrpAssetError = "There are issues in the HDRP asset configuration. (see below)";
             public static readonly GUIContent hdrpAssetUsedLabel = EditorGUIUtility.TrTextContent("Assigned");
-            public static readonly GUIContent hdrpAssetUsedError = EditorGUIUtility.TrTextContent("There is no HDRP asset assigned to the render pipeline!");
+            public const string hdrpAssetUsedError = "There is no HDRP asset assigned to the render pipeline!";
             public static readonly GUIContent hdrpAssetRuntimeResourcesLabel = EditorGUIUtility.TrTextContent("Runtime resources");
-            public static readonly GUIContent hdrpAssetRuntimeResourcesError = EditorGUIUtility.TrTextContent("There is an issue with the runtime resources!");
-            public static readonly GUIContent hdrpAssetEditorResourcesLabel = EditorGUIUtility.TrTextContent("Runtime resources");
-            public static readonly GUIContent hdrpAssetEditorResourcesError = EditorGUIUtility.TrTextContent("There is an issue with the editor resources!");
+            public const string hdrpAssetRuntimeResourcesError = "There is an issue with the runtime resources!";
+            public static readonly GUIContent hdrpAssetEditorResourcesLabel = EditorGUIUtility.TrTextContent("Editor resources");
+            public const string hdrpAssetEditorResourcesError = "There is an issue with the editor resources!";
             public static readonly GUIContent hdrpAssetDiffusionProfileLabel = EditorGUIUtility.TrTextContent("Diffusion profile");
-            public static readonly GUIContent hdrpAssetDiffusionProfileError = EditorGUIUtility.TrTextContent("There is no diffusion profile assigned in the HDRP asset!");
+            public const string hdrpAssetDiffusionProfileError = "There is no diffusion profile assigned in the HDRP asset!";
             public static readonly GUIContent defaultVolumeProfileLabel = EditorGUIUtility.TrTextContent("Default volume profile");
-            public static readonly GUIContent defaultVolumeProfileError = EditorGUIUtility.TrTextContent("Default volume profile must be set to save disk space and share settings!");
+            public const string defaultVolumeProfileError = "Default volume profile must be set to save disk space and share settings!";
         }
 
         static VolumeProfile s_DefaultVolumeProfile;
@@ -151,9 +152,13 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
 
         void DrawConfigInfo()
         {
+            EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField(Style.allConfigurationLabel, EditorStyles.boldLabel);
-            GUILayout.BeginVertical("box", GUILayout.MinWidth(300), GUILayout.MaxWidth(800), GUILayout.ExpandWidth(true));
-            DrawConfigInfoLine(Style.allConfigurationLabel, Style.allConfigurationError, Style.ok, Style.resolveAll, allTester, allResolver);
+            GUILayout.FlexibleSpace();
+            if (!allTester() && GUILayout.Button(Style.resolveAll, EditorStyles.miniButton, GUILayout.Width(100), GUILayout.ExpandWidth(false)))
+                allResolver();
+            EditorGUILayout.EndHorizontal();
+
             ++EditorGUI.indentLevel;
             DrawConfigInfoLine(Style.scriptingRuntimeVersionLabel, Style.scriptingRuntimeVersionError, Style.ok, Style.resolve, scriptRuntimeVersionTester, scriptRuntimeVersionResolver);
             DrawConfigInfoLine(Style.colorSpaceLabel, Style.colorSpaceError, Style.ok, Style.resolve, colorSpaceTester, colorSpaceResolver);
@@ -169,36 +174,24 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             --EditorGUI.indentLevel;
             DrawConfigInfoLine(Style.defaultVolumeProfileLabel, Style.defaultVolumeProfileError, Style.ok, Style.resolve, defaultVolumeProfileTester, defaultVolumeProfileResolver);
             --EditorGUI.indentLevel;
-            GUILayout.EndVertical();
         }
 
-        void DrawConfigInfoLine(GUIContent label, GUIContent error, GUIContent ok, GUIContent button, Func<bool> tester, Action resolver)
+        void DrawConfigInfoLine(GUIContent label, string error, GUIContent ok, GUIContent resolverButtonLabel, Func<bool> tester, Action resolver, GUIContent AdditionalCheckButtonLabel = null, Func<bool> additionalTester = null)
         {
-            const float k_IndentOffsetFactor = 15f;
-            const float k_EdgeOffset = 5f;
-            const float k_ResolveButtonWidth = 92;
-            float indentOffset = EditorGUI.indentLevel * k_IndentOffsetFactor;
-            
-            Rect lineRect = GUILayoutUtility.GetRect(1, EditorGUIUtility.singleLineHeight);
-            Rect labelRect = new Rect(lineRect.x + indentOffset + k_EdgeOffset, lineRect.y, EditorGUIUtility.labelWidth, lineRect.height);
-            Rect resolveRect = new Rect(lineRect.x + lineRect.width - k_ResolveButtonWidth - k_EdgeOffset, lineRect.y + 2, k_ResolveButtonWidth, lineRect.height - 2);
-            Rect statusRect = new Rect(lineRect.x + k_EdgeOffset + labelRect.width, lineRect.y, lineRect.width - labelRect.width - resolveRect.width - k_EdgeOffset, lineRect.height);
+            bool wellConfigured = tester();
+            EditorGUILayout.LabelField(label, wellConfigured ? Style.ok : Style.fail);
+            if (wellConfigured)
+                return;
 
-            GUI.Label(labelRect, label);
-            Color previous = GUI.color;
-            if (tester())
-            {
-                GUI.color = Color.green;
-                GUI.Label(statusRect, ok);
-            }
-            else
-            {
-                GUI.color = Color.red;
-                GUI.Label(statusRect, error);
-            }
-            GUI.color = previous;
-            if (GUI.Button(resolveRect, button, EditorStyles.miniButton))
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.HelpBox(error, MessageType.Error);
+            EditorGUILayout.BeginVertical(GUILayout.Width(108), GUILayout.ExpandWidth(false));
+            EditorGUILayout.Space();
+            if (GUILayout.Button(resolverButtonLabel, EditorStyles.miniButton))
                 resolver();
+            EditorGUILayout.EndVertical();
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.Space();
         }
 
         //T CreateOrLoad<T>(GUIContent label)
@@ -208,12 +201,12 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
 
         bool allTester() =>
             scriptRuntimeVersionTester()
-            || lightmapTester()
-            || shadowTester()
-            || shadowmaskTester()
-            || colorSpaceTester()
-            || hdrpAssetTester()
-            || defaultVolumeProfileTester();
+            && lightmapTester()
+            && shadowTester()
+            && shadowmaskTester()
+            && colorSpaceTester()
+            && hdrpAssetTester()
+            && defaultVolumeProfileTester();
         void allResolver()
         {
             if (scriptRuntimeVersionTester())
@@ -234,9 +227,9 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
 
         bool hdrpAssetTester() =>
             hdrpAssetUsedTester()
-            || hdrpAssetRuntimeResourcesTester()
-            || hdrpAssetEditorResourcesTester()
-            || hdrpAssetDiffusionProfileTester();
+            && hdrpAssetRuntimeResourcesTester()
+            && hdrpAssetEditorResourcesTester()
+            && hdrpAssetDiffusionProfileTester();
         void hdrpAssetResolver()
         {
             if (hdrpAssetUsedTester())
