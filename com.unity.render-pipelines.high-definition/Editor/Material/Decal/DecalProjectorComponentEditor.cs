@@ -19,6 +19,9 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
         private SerializedProperty m_AffectsTransparencyProperty;
         private SerializedProperty m_Size;
         private SerializedProperty m_IsCropModeEnabledProperty;
+        private SerializedProperty m_SmoothnessRemapMin;
+        private SerializedProperty m_SmoothnessRemapMax;
+
 
         private DecalProjectorComponentHandle m_Handle = new DecalProjectorComponentHandle();
 
