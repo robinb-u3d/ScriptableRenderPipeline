@@ -58,9 +58,9 @@ Shader "HDRenderPipeline/AxF"
 
         // Cook-Torrance Lobes Descriptors
         _CarPaint2_LobeCount("_CarPaint2_LobeCount", Int) = 0
-        _CarPaint2_CTF0s("_CarPaint2_CTF0s", Color) = (1,1,1,1)
-        _CarPaint2_CTCoeffs("_CarPaint2_CTCoeffs", Color) = (1,1,1,1)
-        _CarPaint2_CTSpreads("_CarPaint2_CTSpreads", Color) = (1,1,1,1)
+        _CarPaint2_CTF0s("_CarPaint2_CTF0s", Vector) = (1,1,1,1)
+        _CarPaint2_CTCoeffs("_CarPaint2_CTCoeffs", Vector) = (1,1,1,1)
+        _CarPaint2_CTSpreads("_CarPaint2_CTSpreads", Vector) = (1,1,1,1)
 
 //      [ToggleUI]  _AlphaCutoffEnable("Alpha Cutoff Enable", Float) = 0.0
         _AlphaCutoff("Alpha Cutoff", Range(0.0, 1.0)) = 0.5
