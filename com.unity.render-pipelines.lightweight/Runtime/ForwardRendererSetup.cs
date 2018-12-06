@@ -96,20 +96,22 @@ namespace UnityEngine.Experimental.Rendering.LWRP
             m_Initialized = true;
         }
 
-        public static bool RequiresIntermediateColorTexture(ref CameraData cameraData, RenderTextureDescriptor baseDescriptor)
+        public static bool RequiresIntermediateColorTexture(ref RenderingData renderingData, RenderTextureDescriptor baseDescriptor)
         {
+            CameraData cameraData = renderingData.cameraData;
             bool isScaledRender = !Mathf.Approximately(cameraData.renderScale, 1.0f);
             bool isTargetTexture2DArray = baseDescriptor.dimension == TextureDimension.Tex2DArray;
             bool requiresExplicitMsaaResolve = cameraData.msaaSamples > 1 && !SystemInfo.supportsMultisampleAutoResolve;
             bool isOffscreenRender = cameraData.camera.targetTexture != null && !cameraData.isSceneViewCamera;    
             bool isCapturing = cameraData.captureActions != null;
 
-            bool requiresIntermediateBlit = cameraData.postProcessEnabled || cameraData.requiresOpaqueTexture || requiresExplicitMsaaResolve;
+            bool requiresBlitForOffscreenCamera = cameraData.postProcessEnabled || cameraData.requiresOpaqueTexture || requiresExplicitMsaaResolve;
             if (isOffscreenRender)
-                return requiresIntermediateBlit;
+                return requiresBlitForOffscreenCamera;
 
-            return requiresIntermediateBlit || cameraData.isSceneViewCamera || isScaledRender || cameraData.isHdrEnabled ||
-                isTargetTexture2DArray || !cameraData.isDefaultViewport || isCapturing;
+            return requiresBlitForOffscreenCamera || cameraData.isSceneViewCamera || isScaledRender || cameraData.isHdrEnabled ||
+                isTargetTexture2DArray || !cameraData.isDefaultViewport || isCapturing || Display.main.requiresBlitToBackbuffer
+                    || renderingData.killAlphaInFinalBlit;
         }
 
         List<IBeforeRender> m_BeforeRenderPasses = new List<IBeforeRender>(10);
@@ -168,15 +170,13 @@ namespace UnityEngine.Experimental.Rendering.LWRP
             camera.GetComponents(m_AfterTransparentPasses);
             camera.GetComponents(m_AfterRenderPasses);
 
-            bool createColorTexture = RequiresIntermediateColorTexture(ref renderingData.cameraData, baseDescriptor)
+            bool createColorTexture = RequiresIntermediateColorTexture(ref renderingData, baseDescriptor)
                     || m_BeforeRenderPasses.Count != 0
                     || m_AfterOpaquePasses.Count != 0
                     || m_AfterOpaquePostProcessPasses.Count != 0
                     || m_AfterSkyboxPasses.Count != 0
                     || m_AfterTransparentPasses.Count != 0
-                    || m_AfterRenderPasses.Count != 0
-                    || Display.main.requiresBlitToBackbuffer
-                    || renderingData.killAlphaInFinalBlit;
+                    || m_AfterRenderPasses.Count != 0;
 
             // If camera requires depth and there's no depth pre-pass we create a depth texture that can be read
             // later by effect requiring it.
