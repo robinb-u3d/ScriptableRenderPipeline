@@ -40,7 +40,6 @@ namespace UnityEngine.Experimental.Rendering.LWRP
             this.depthAttachmentHandle = depthAttachmentHandle;
             baseDescriptor.colorFormat = RenderTextureFormat.Depth;
             baseDescriptor.depthBufferBits = kDepthBufferBits;
-            baseDescriptor.depthBufferBits = 0;
             baseDescriptor.bindMS = false;
             baseDescriptor.msaaSamples = (int)samples;
             

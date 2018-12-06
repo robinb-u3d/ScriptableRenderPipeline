@@ -100,16 +100,16 @@ namespace UnityEngine.Experimental.Rendering.LWRP
         {
             bool isScaledRender = !Mathf.Approximately(cameraData.renderScale, 1.0f);
             bool isTargetTexture2DArray = baseDescriptor.dimension == TextureDimension.Tex2DArray;
-            bool noAutoResolveMsaa = cameraData.msaaSamples > 1 && !SystemInfo.supportsMultisampleAutoResolve;
+            bool requiresExplicitMsaaResolve = cameraData.msaaSamples > 1 && !SystemInfo.supportsMultisampleAutoResolve;
             bool isOffscreenRender = cameraData.camera.targetTexture != null && !cameraData.isSceneViewCamera;    
             bool isCapturing = cameraData.captureActions != null;
-			
+
+            bool requiresIntermediateBlit = cameraData.postProcessEnabled || cameraData.requiresOpaqueTexture || requiresExplicitMsaaResolve;
             if (isOffscreenRender)
-                return cameraData.postProcessEnabled || cameraData.requiresOpaqueTexture;
-            else    
-                return noAutoResolveMsaa || cameraData.isSceneViewCamera || isScaledRender || cameraData.isHdrEnabled ||
-                cameraData.postProcessEnabled || cameraData.requiresOpaqueTexture || isTargetTexture2DArray || !cameraData.isDefaultViewport ||
-                isCapturing;
+                return requiresIntermediateBlit;
+
+            return requiresIntermediateBlit || cameraData.isSceneViewCamera || isScaledRender || cameraData.isHdrEnabled ||
+                isTargetTexture2DArray || !cameraData.isDefaultViewport || isCapturing;
         }
 
         List<IBeforeRender> m_BeforeRenderPasses = new List<IBeforeRender>(10);
@@ -147,7 +147,13 @@ namespace UnityEngine.Experimental.Rendering.LWRP
             }
 
             bool resolveShadowsInScreenSpace = mainLightShadows && renderingData.shadowData.requiresScreenSpaceShadowResolve;
-            bool requiresDepthPrepass = resolveShadowsInScreenSpace || renderingData.cameraData.isSceneViewCamera ||
+
+            // Depth prepass is generated in the following cases:
+            // - We resolve shadows in screen space
+            // - Scene view camera always requires a depth texture. We do a depth pre-pass to simplify it and it shouldn't matter much for editor.
+            // - If game or offscreen camera requires it we check if we can copy the depth from the rendering opaques pass and use that instead.
+            bool requiresDepthPrepass = resolveShadowsInScreenSpace ||
+                                        renderingData.cameraData.isSceneViewCamera ||
                                         (renderingData.cameraData.requiresDepthTexture && (!CanCopyDepth(ref renderingData.cameraData)));
 
             // For now VR requires a depth prepass until we figure out how to properly resolve texture2DMS in stereo
@@ -162,7 +168,7 @@ namespace UnityEngine.Experimental.Rendering.LWRP
             camera.GetComponents(m_AfterTransparentPasses);
             camera.GetComponents(m_AfterRenderPasses);
 
-            bool requiresRenderToTexture = RequiresIntermediateColorTexture(ref renderingData.cameraData, baseDescriptor)
+            bool createColorTexture = RequiresIntermediateColorTexture(ref renderingData.cameraData, baseDescriptor)
                     || m_BeforeRenderPasses.Count != 0
                     || m_AfterOpaquePasses.Count != 0
                     || m_AfterOpaquePostProcessPasses.Count != 0
@@ -172,15 +178,16 @@ namespace UnityEngine.Experimental.Rendering.LWRP
                     || Display.main.requiresBlitToBackbuffer
                     || renderingData.killAlphaInFinalBlit;
 
-            RenderTargetHandle colorHandle = RenderTargetHandle.CameraTarget;
-            RenderTargetHandle depthHandle = RenderTargetHandle.CameraTarget;
+            // If camera requires depth and there's no depth pre-pass we create a depth texture that can be read
+            // later by effect requiring it.
+            bool createDepthTexture = renderingData.cameraData.requiresDepthTexture && !requiresDepthPrepass;
+
+            RenderTargetHandle colorHandle = (createColorTexture) ? m_ColorAttachment : RenderTargetHandle.CameraTarget;
+            RenderTargetHandle depthHandle = (createDepthTexture) ? m_DepthAttachment : RenderTargetHandle.CameraTarget;
 
             var sampleCount = (SampleCount)renderingData.cameraData.msaaSamples;
-            if (requiresRenderToTexture)
+            if (createColorTexture || createDepthTexture)
             {
-                colorHandle = m_ColorAttachment;
-                depthHandle = m_DepthAttachment;
-
                 m_CreateLightweightRenderTexturesPass.Setup(baseDescriptor, colorHandle, depthHandle, sampleCount);
                 renderer.EnqueuePass(m_CreateLightweightRenderTexturesPass);
             }
@@ -240,7 +247,8 @@ namespace UnityEngine.Experimental.Rendering.LWRP
             foreach (var pass in m_AfterSkyboxPasses)
                 renderer.EnqueuePass(pass.GetPassToEnqueue(baseDescriptor, colorHandle, depthHandle));
 
-            if (renderingData.cameraData.requiresDepthTexture && !requiresDepthPrepass)
+            // If a depth texture was created we necessarily need to copy it, otherwise we could have render it to a renderbuffer
+            if (createDepthTexture)
             {
                 m_CopyDepthPass.Setup(depthHandle, m_DepthTexture);
                 renderer.EnqueuePass(m_CopyDepthPass);

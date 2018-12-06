@@ -45,8 +45,9 @@ namespace UnityEngine.Experimental.Rendering.LWRP
             CommandBuffer cmd = CommandBufferPool.Get(k_CreateRenderTexturesTag);
             if (colorAttachmentHandle != RenderTargetHandle.CameraTarget)
             {
+                bool useDepthRenderBuffer = depthAttachmentHandle == RenderTargetHandle.CameraTarget;
                 var colorDescriptor = descriptor;
-                colorDescriptor.depthBufferBits = 0;
+                colorDescriptor.depthBufferBits = (useDepthRenderBuffer) ? k_DepthStencilBufferBits : 0;
                 colorDescriptor.sRGB = true;
                 colorDescriptor.msaaSamples = (int)samples;
                 cmd.GetTemporaryRT(colorAttachmentHandle.id, colorDescriptor, FilterMode.Bilinear);

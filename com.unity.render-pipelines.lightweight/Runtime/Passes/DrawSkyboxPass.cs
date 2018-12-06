@@ -34,11 +34,17 @@ namespace UnityEngine.Experimental.Rendering.LWRP
             CommandBuffer cmd = CommandBufferPool.Get("Draw Skybox (Set RT's)");
             if (renderingData.cameraData.isStereoEnabled && XRGraphics.eyeTextureDesc.dimension == TextureDimension.Tex2DArray)
             {
-                cmd.SetRenderTarget(colorAttachmentHandle.Identifier(), depthAttachmentHandle.Identifier(), 0, CubemapFace.Unknown, -1);
+                if (depthAttachmentHandle != RenderTargetHandle.CameraTarget)
+                    cmd.SetRenderTarget(colorAttachmentHandle.Identifier(), depthAttachmentHandle.Identifier(), 0, CubemapFace.Unknown, -1);
+                else
+                    cmd.SetRenderTarget(colorAttachmentHandle.Identifier(), 0, CubemapFace.Unknown, -1);
             }
             else
             {
-                cmd.SetRenderTarget(colorAttachmentHandle.Identifier(), depthAttachmentHandle.Identifier());
+                if (depthAttachmentHandle != RenderTargetHandle.CameraTarget)
+                    cmd.SetRenderTarget(colorAttachmentHandle.Identifier(), depthAttachmentHandle.Identifier());
+                else
+                    cmd.SetRenderTarget(colorAttachmentHandle.Identifier());
             }
 
             context.ExecuteCommandBuffer(cmd);
