@@ -26,6 +26,23 @@
 #define unity_WorldToCamera unity_StereoWorldToCamera[unity_StereoEyeIndex]
 #define unity_CameraToWorld unity_StereoCameraToWorld[unity_StereoEyeIndex]
 #define _WorldSpaceCameraPos unity_StereoWorldSpaceCameraPos[unity_StereoEyeIndex]
+
+#ifndef USE_LEGACY_UNITY_MATRIX_VARIABLES
+// Take a similar hack to HD for the time being
+#define UNITY_MATRIX_M     unity_ObjectToWorld
+#define UNITY_MATRIX_I_M   unity_WorldToObject
+#define UNITY_MATRIX_V     unity_StereoMatrixV[unity_StereoEyeIndex]
+#define UNITY_MATRIX_I_V   unity_StereoMatrixInvV[unity_StereoEyeIndex]
+#define UNITY_MATRIX_P     OptimizeProjectionMatrix(_ProjMatrixStereo[unity_StereoEyeIndex])
+#define UNITY_MATRIX_I_P   ERROR_UNITY_MATRIX_I_P_IS_NOT_DEFINED
+#define UNITY_MATRIX_VP    _ViewProjMatrixStereo[unity_StereoEyeIndex]
+#define UNITY_MATRIX_I_VP  _InvViewProjMatrixStereo[unity_StereoEyeIndex]
+#define UNITY_MATRIX_MV    mul(UNITY_MATRIX_V, UNITY_MATRIX_M)
+#define UNITY_MATRIX_T_MV  transpose(UNITY_MATRIX_MV)
+#define UNITY_MATRIX_IT_MV transpose(mul(UNITY_MATRIX_I_M, UNITY_MATRIX_I_V))
+#define UNITY_MATRIX_MVP   mul(UNITY_MATRIX_VP, UNITY_MATRIX_M)
+#endif
+
 #endif
 
 #define UNITY_LIGHTMODEL_AMBIENT (glstate_lightmodel_ambient * 2)
@@ -234,18 +251,34 @@ TEXTURE2D(unity_ShadowMask);
 // TODO: sort these vars by the frequency of use (descending), and put commonly used vars together.
 // Note: please use UNITY_MATRIX_X macros instead of referencing matrix variables directly.
 CBUFFER_START(UnityPerPass)
-float4x4 _PrevViewProjMatrix;
-float4x4 _ViewProjMatrix;
-float4x4 _NonJitteredViewProjMatrix;
 float4x4 _ViewMatrix;
 float4x4 _ProjMatrix;
-float4x4 _InvViewProjMatrix;
-float4x4 _InvViewMatrix;
+float4x4 _ViewProjMatrix;
+float4x4 _PrevViewProjMatrix;
+float4x4 _NonJitteredViewProjMatrix;
 float4x4 _InvProjMatrix;
+float4x4 _InvViewMatrix;
+float4x4 _InvViewProjMatrix;
 float4   _InvProjParam;
 float4   _ScreenSize;       // {w, h, 1/w, 1/h}
 float4   _FrustumPlanes[6]; // {(a, b, c) = N, d = -dot(N, P)} [L, R, T, B, N, F]
 CBUFFER_END
+
+#if defined(USING_STEREO_MATRICES)
+CBUFFER_START(UnityPerPassStereo)
+float4x4 _ViewMatrixStereo[2];
+float4x4 _ProjMatrixStereo[2];
+float4x4 _ViewProjMatrixStereo[2];
+float4x4 _PrevViewProjMatrixStereo[2];
+float4x4 _NonJitteredViewProjMatrixStereo[2];
+float4x4 _InvViewMatrixStereo[2];
+float4x4 _InvProjMatrixStereo[2];
+float4x4 _InvViewProjMatrixStereo[2];
+
+float4x4 _CameraProjection[2]; // Projection matrix of the main camera, doesn't have to match the current projection matrix.
+float4x4 _CameraInvProjection[2];
+CBUFFER_END
+#endif // USING_STEREO_MATRICES
 
 float4x4 OptimizeProjectionMatrix(float4x4 M)
 {

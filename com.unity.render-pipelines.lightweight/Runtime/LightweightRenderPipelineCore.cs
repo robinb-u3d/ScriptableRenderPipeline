@@ -86,6 +86,23 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
             get { return nonJitteredProjMatrix * viewMatrix; }
         }
 
+        public MotionVectorData()
+        {
+            viewMatrixStereo = new Matrix4x4[2];
+            projMatrixStereo = new Matrix4x4[2];
+            nonJitteredProjMatrixStereo = new Matrix4x4[2];
+            previousNonJitteredViewProjMatrixStereo = new Matrix4x4[2];
+            viewProjMatrixStereo = new Matrix4x4[2];
+            nonJitteredViewProjMatrixStereo = new Matrix4x4[2];
+        }
+
+        public Matrix4x4[] viewMatrixStereo;
+        public Matrix4x4[] projMatrixStereo;
+        public Matrix4x4[] nonJitteredProjMatrixStereo;
+        public Matrix4x4[] previousNonJitteredViewProjMatrixStereo;
+        public Matrix4x4[] viewProjMatrixStereo;
+        public Matrix4x4[] nonJitteredViewProjMatrixStereo;
+
         //public Vector4 taaFrameRotation; - Matt: Add TAA support
     }
 

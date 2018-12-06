@@ -28,16 +28,35 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
         static class PerCameraBuffer
         {
             // TODO: This needs to account for stereo rendering
-            public static int _InvCameraViewProj;
-            public static int _ScaledScreenParams;
-            public static int _NonJitteredViewProjMatrix;
-            public static int _PrevViewProjMatrix;
-
-            public static int _ViewProjMatrix;
             public static int _ProjMatrix;
+            public static int _ViewProjMatrix;
+            public static int _PrevViewProjMatrix;
+            public static int _NonJitteredViewProjMatrix;
+            public static int _InvCameraViewProj;
 
+            public static int _ScaledScreenParams;
             public static int _ProjectionParams;
             // public static int _TaaFrameRotation; - MATT: Add TAA support
+        }
+
+        //    float4x4 _ViewMatrixStereo[2];
+        //    float4x4 _ProjMatrixStereo[2];
+        //    float4x4 _ViewProjMatrixStereo[2];
+        //    float4x4 _PrevViewProjMatrixStereo[2];
+        //    float4x4 _NonJitteredViewProjMatrixStereo[2];
+        //    float4x4 _InvViewMatrixStereo[2];
+        //    float4x4 _InvProjMatrixStereo[2];
+        //    float4x4 _InvViewProjMatrixStereo[2];
+        static class PerCameraStereoBuffer
+        {
+            public static int _ProjMatrixStereo;
+            public static int _ViewProjMatrixStereo;
+            public static int _NonJitteredViewProjMatrixStereo;
+            public static int _PrevViewProjMatrixStereo;
+            public static int _InvCameraViewProjMatrixStereo;
+
+            public static int _CameraProjection;
+            public static int _CameraInvProjection;
         }
 
         private static IRendererSetup s_DefaultRendererSetup;
@@ -149,6 +168,15 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
             PerCameraBuffer._ViewProjMatrix = Shader.PropertyToID("_ViewProjMatrix");
             PerCameraBuffer._ProjectionParams = Shader.PropertyToID("_ProjectionParams");
 
+            // Stereo matricies
+            PerCameraStereoBuffer._InvCameraViewProjMatrixStereo = Shader.PropertyToID("_InvCameraViewProjStereo");
+            PerCameraStereoBuffer._NonJitteredViewProjMatrixStereo = Shader.PropertyToID("_NonJitteredViewProjMatrixStereo");
+            PerCameraStereoBuffer._PrevViewProjMatrixStereo = Shader.PropertyToID("_PrevViewProjMatrixStereo");
+            PerCameraStereoBuffer._ProjMatrixStereo = Shader.PropertyToID("_ProjMatrixStereo");
+            PerCameraStereoBuffer._ViewProjMatrixStereo = Shader.PropertyToID("_ViewProjMatrixStereo");
+            PerCameraStereoBuffer._CameraProjection = Shader.PropertyToID("_CameraProjection");
+            PerCameraStereoBuffer._CameraInvProjection = Shader.PropertyToID("_CameraInvProjection");
+
             //PerCameraBuffer._TaaFrameRotation = Shader.PropertyToID("_TaaFrameRotation"); - MATT: Add TAA support
 
             // Let engine know we have MSAA on for cases where we support MSAA backbuffer
@@ -250,7 +278,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
                 InitializeCameraData(settings, camera, out cameraData);
 
                 if(cameraData.requiresMotionVectorsTexture)
-                    UpdateMotionVectorData(cameraData);
+                    UpdateMotionVectorData(cameraData, renderer);
 
                 SetupPerCameraShaderConstants(cameraData);
 
@@ -307,7 +335,47 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
 #endif
         }
 
-        public static void UpdateMotionVectorData(CameraData cameraData)
+        private static void UpdateMotionVectorDataStereo(CameraData cameraData, ScriptableRenderer renderer, bool taaEnabled)
+        {
+            Camera camera = cameraData.camera;
+            PostProcessLayer postProcessLayer = cameraData.postProcessLayer;
+
+            for (Camera.StereoscopicEye eye = Camera.StereoscopicEye.Left; eye <= Camera.StereoscopicEye.Right; ++eye)
+            {
+                var nonJitteredCameraProj = camera.GetStereoProjectionMatrix(eye);
+                var cameraProj = taaEnabled
+                    ? postProcessLayer.temporalAntialiasing.GetStereoJitteredProjectionMatrix(camera.pixelWidth, camera.pixelHeight, camera, eye) // TODO: This is wrong as we should use the XRSettings eye texture width and height as double wide will effect the cmera pixel width.
+                    : nonJitteredCameraProj;
+
+                var gpuProj = GL.GetGPUProjectionMatrix(cameraProj, true); // Had to change this from 'false'
+                var gpuView = camera.GetStereoViewMatrix(eye);
+                var gpuNonJitteredProj = GL.GetGPUProjectionMatrix(nonJitteredCameraProj, true);
+                var gpuVP = gpuNonJitteredProj * gpuView;
+
+                MotionVectorData motionVectorData = GetMotionVectorData(camera);
+
+                // A camera could be rendered multiple times per frame, only updates the previous view proj & pos if needed
+                if (motionVectorData.lastFrameActive != Time.frameCount)
+                {
+                    if (motionVectorData.isFirstFrame)
+                        motionVectorData.previousNonJitteredViewProjMatrixStereo[(int)eye] = gpuVP;
+                    else
+                        motionVectorData.previousNonJitteredViewProjMatrixStereo[(int)eye] = motionVectorData.nonJitteredViewProjMatrixStereo[(int)eye];
+                }
+
+                //taaFrameIndex = taaEnabled ? (uint)postProcessLayer.temporalAntialiasing.sampleIndex : 0; - MATT: Add TAA support
+                //taaFrameRotation = new Vector2(Mathf.Sin(taaFrameIndex * (0.5f * Mathf.PI)),
+                //        Mathf.Cos(taaFrameIndex * (0.5f * Mathf.PI)));
+
+                motionVectorData.viewMatrixStereo[(int)eye] = gpuView;
+                motionVectorData.projMatrixStereo[(int)eye] = gpuProj;
+                motionVectorData.nonJitteredProjMatrixStereo[(int)eye] = gpuNonJitteredProj;
+                motionVectorData.viewProjMatrixStereo[(int) eye] = gpuProj * gpuView;
+                motionVectorData.nonJitteredViewProjMatrixStereo[(int) eye] = gpuNonJitteredProj * gpuView;
+            }
+        }
+
+        public static void UpdateMotionVectorData(CameraData cameraData, ScriptableRenderer renderer)
         {
             Camera camera = cameraData.camera;
             PostProcessLayer postProcessLayer = cameraData.postProcessLayer;
@@ -319,6 +387,8 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
                 postProcessLayer.antialiasingMode == PostProcessLayer.Antialiasing.TemporalAntialiasing &&
                 postProcessLayer.temporalAntialiasing.IsSupported() &&
                 cameraData.postProcessEnabled;
+
+            UpdateMotionVectorDataStereo(cameraData, renderer, taaEnabled);
 
             var nonJitteredCameraProj = camera.projectionMatrix;
             var cameraProj = taaEnabled
@@ -352,6 +422,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
             motionVectorData.viewMatrix = gpuView;
             motionVectorData.projMatrix = gpuProj;
             motionVectorData.nonJitteredProjMatrix = gpuNonJitteredProj;
+
             motionVectorData.lastFrameActive = Time.frameCount;
         }
 
@@ -570,6 +641,51 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
             Shader.SetGlobalVector(PerFrameBuffer._SubtractiveShadowColor, CoreUtils.ConvertSRGBToActiveColorSpace(RenderSettings.subtractiveShadowColor));
         }
 
+        static void SetupPerCameraShaderConstantsStereo(CameraData cameraData)
+        {
+            Camera camera = cameraData.camera;
+            Matrix4x4[] invViewProjMatrixStereo = new Matrix4x4[2];
+            Matrix4x4[] viewProjMatrixStereo = new Matrix4x4[2];
+            Matrix4x4[] projMatrixStereo = new Matrix4x4[2];
+            Matrix4x4[] invProjMatrixStereo = new Matrix4x4[2];
+
+            for (Camera.StereoscopicEye eye = Camera.StereoscopicEye.Left; eye <= Camera.StereoscopicEye.Right; ++eye)
+            {
+
+                Matrix4x4 projMatrix = GL.GetGPUProjectionMatrix(camera.GetStereoProjectionMatrix(eye), true);
+                if (cameraData.requiresMotionVectorsTexture)
+                {
+                    MotionVectorData motionVectorData = GetMotionVectorData(camera);
+                    projMatrix = motionVectorData.projMatrixStereo[(int)eye]; // Use the possibly jittered version.
+                }
+
+                Matrix4x4 viewMatrix = camera.GetStereoViewMatrix(eye);
+                viewProjMatrixStereo[(int)eye] = projMatrix * viewMatrix;
+                invViewProjMatrixStereo[(int)eye] = Matrix4x4.Inverse(viewProjMatrixStereo[(int)eye]);
+                projMatrixStereo[(int) eye] = projMatrix;
+                invProjMatrixStereo[(int)eye] = Matrix4x4.Inverse(projMatrix);
+            }
+
+            Shader.SetGlobalMatrixArray(PerCameraStereoBuffer._InvCameraViewProjMatrixStereo, invViewProjMatrixStereo);
+
+            Shader.SetGlobalMatrixArray(PerCameraStereoBuffer._ViewProjMatrixStereo, viewProjMatrixStereo);
+            Shader.SetGlobalMatrixArray(PerCameraStereoBuffer._ProjMatrixStereo, projMatrixStereo);
+
+            Shader.SetGlobalMatrixArray(PerCameraStereoBuffer._CameraProjection, projMatrixStereo);
+            Shader.SetGlobalMatrixArray(PerCameraStereoBuffer._CameraInvProjection, projMatrixStereo);
+
+            if (cameraData.requiresMotionVectorsTexture)
+            {
+                MotionVectorData motionVectorData = GetMotionVectorData(camera);
+
+                //Shader.SetGlobalMatrixArray(PerCameraStereoBuffer._ProjMatrixStereo, motionVectorData.projMatrixStereo);
+                //Shader.SetGlobalMatrixArray(PerCameraStereoBuffer._ViewProjMatrixStereo, motionVectorData.viewProjMatrixStereo);
+                Shader.SetGlobalMatrixArray(PerCameraStereoBuffer._NonJitteredViewProjMatrixStereo, motionVectorData.nonJitteredViewProjMatrixStereo);
+                Shader.SetGlobalMatrixArray(PerCameraStereoBuffer._PrevViewProjMatrixStereo, motionVectorData.previousNonJitteredViewProjMatrixStereo);
+                //Shader.SetGlobalVector(PerCameraBuffer._TaaFrameRotation, motionVectorData.taaFrameRotation); - MATT: Add TAA support
+            }
+        }
+
         static void SetupPerCameraShaderConstants(CameraData cameraData)
         {
             Camera camera = cameraData.camera;
@@ -624,6 +740,8 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
                 Shader.SetGlobalMatrix(PerCameraBuffer._PrevViewProjMatrix, motionVectorData.previousNonJitteredViewProjMatrix);
                 //Shader.SetGlobalVector(PerCameraBuffer._TaaFrameRotation, motionVectorData.taaFrameRotation); - MATT: Add TAA support
             }
+
+            SetupPerCameraShaderConstantsStereo(cameraData);
         }
 
         public static Lightmapping.RequestLightsDelegate lightsDelegate = (Light[] requests, NativeArray<LightDataGI> lightsOutput) =>
