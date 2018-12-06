@@ -5,7 +5,7 @@
 
 #pragma only_renderers d3d11 ps4 xboxone vulkan metal switch
 
-#pragma kernel AmbientProbeConvolution KERNEL_SIZE=8 KERNEL_NAME=AmbientProbeConvolution
+#pragma kernel AmbientProbeConvolution KERNEL_NAME=AmbientProbeConvolution
 
 RWStructuredBuffer<float>   _AmbientProbeOutputBuffer;
 TEXTURECUBE(_AmbientProbeInputCubemap);
@@ -13,65 +13,97 @@ TEXTURECUBE(_AmbientProbeInputCubemap);
 // Constants from SetSHEMapConstants function in the Stupid Spherical Harmonics Tricks paper:
 // http://www.ppsloan.org/publications/StupidSH36.pdf
 #define sqrtPI (sqrt(PI))
-#define fC0 (1.0f / (2.0f * sqrtPI))
-#define fC1 (sqrt ( 3.0f) / ( 3.0f * sqrtPI))
-#define fC2 (sqrt (15.0f) / ( 8.0f * sqrtPI))
-#define fC3 (sqrt ( 5.0f) / (16.0f * sqrtPI))
-#define fC4 (0.5f * fC2)
+#define fC0 (0.282095f * (1.0f / (2.0f * sqrtPI)))
+#define fC1 (0.488603f * (sqrt ( 3.0f) / ( 3.0f * sqrtPI)))
+#define fC2 (1.092548f * (sqrt (15.0f) / ( 8.0f * sqrtPI)))
+#define fC3 (0.315392f * (sqrt ( 5.0f) / (16.0f * sqrtPI)))
+#define fC4 (0.546274f * 0.5f * fC2)
 
-[numthreads(1, 1, 1)]
-void KERNEL_NAME(uint2 dispatchThreadId : SV_DispatchThreadID)
+#define SAMPLE_COUNT 64
+#define SH_COEFF_COUNT 27
+
+#ifndef SUPPORTS_WAVE_INTRINSICS
+    groupshared float outputSHCoeffsLDS[SH_COEFF_COUNT * SAMPLE_COUNT / 2];
+#endif
+
+static const float ConvolveCosineLobeBandFactor[] = { fC0, -fC1, fC1, -fC1, fC2, -fC2, fC3, -fC2, fC4 };
+
+[numthreads(SAMPLE_COUNT, 1, 1)]
+void KERNEL_NAME(   uint groupId           : SV_GroupID,
+                    uint dispatchThreadId  : SV_DispatchThreadID)
 {
-    int sampleCount = 64;
-
-    for (int coeff = 0; coeff < 27; ++coeff)
-    {
-        _AmbientProbeOutputBuffer[coeff] = 0;
-    }
+    int sampleCount = SAMPLE_COUNT;
 
     float weight = 4.0f * PI / (sampleCount);
+    float2 u = Hammersley2d(dispatchThreadId, sampleCount);
+    float3 n = SampleSphereUniform(u.x, u.y);
 
-    for (int i = 0; i < sampleCount; ++i)
-    {
-        float2 u = Hammersley2d(i, sampleCount);
-        float3 n = SampleSphereUniform(u.x, u.y);
+    float2 cubeSize;
+    _AmbientProbeInputCubemap.GetDimensions(cubeSize.x, cubeSize.y);
 
-        float2 cubeSize;
-        _AmbientProbeInputCubemap.GetDimensions(cubeSize.x, cubeSize.y);
+    float invOmegaP = (6.0f * cubeSize.x * cubeSize.y) / FOUR_PI;
+    float pdf = 1.0f / FOUR_PI;
+    float omegaS = rcp(sampleCount) * rcp(pdf);
+    float mipLevel = 0.5 * log2(omegaS * invOmegaP);
 
-        float invOmegaP = (6.0f * cubeSize.x* cubeSize.y) / FOUR_PI;
-        float pdf = 1.0f / FOUR_PI;
-        float omegaS = rcp(sampleCount) * rcp(pdf);
+    // Sample once per thread
+    float4 value = SAMPLE_TEXTURECUBE_LOD(_AmbientProbeInputCubemap, s_linear_clamp_sampler, n, mipLevel);
 
-        // 'invOmegaP' is precomputed on CPU and provided as a parameter to the function.
-        // real omegaP = FOUR_PI / (6.0 * cubemapWidth * cubemapWidth);
-        float mipLevel = 0.5 * log2(omegaS * invOmegaP);
-
-        float4 value = SAMPLE_TEXTURECUBE_LOD(_AmbientProbeInputCubemap, s_linear_clamp_sampler, n, mipLevel);
-
-        for (int channel = 0; channel < 3; ++channel)
-        {
-            _AmbientProbeOutputBuffer[channel * 9 + 0] += (0.282095f * value[channel]);
-            _AmbientProbeOutputBuffer[channel * 9 + 1] += (-0.488603f * n.y * value[channel]);
-            _AmbientProbeOutputBuffer[channel * 9 + 2] += (0.488603f * n.z * value[channel]);
-            _AmbientProbeOutputBuffer[channel * 9 + 3] += (-0.488603f * n.x * value[channel]);
-            _AmbientProbeOutputBuffer[channel * 9 + 4] += (1.092548f * n.x * n.y * value[channel]);
-            _AmbientProbeOutputBuffer[channel * 9 + 5] += (-1.092548f * n.y * n.z * value[channel]);
-            _AmbientProbeOutputBuffer[channel * 9 + 6] += (0.315392f * (3.0f * n.z * n.z - 1.0f) * value[channel]);
-            _AmbientProbeOutputBuffer[channel * 9 + 7] += (-1.092548f * n.x * n.z * value[channel]);
-            _AmbientProbeOutputBuffer[channel * 9 + 8] += (0.546274f * (n.x * n.x - n.y * n.y) * value[channel]);
-        }
-    }
-
-    float ConvolveCosineLobeBandFactor[] = { fC0, -fC1, fC1, -fC1, fC2, -fC2, fC3, -fC2, fC4 };
+    float outputSHCoeffs[SH_COEFF_COUNT];
 
     for (int channel = 0; channel < 3; ++channel)
     {
-        for (int coeff = 0; coeff < 9; ++coeff)
+        outputSHCoeffs[channel * 9 + 0] = value[channel];
+        outputSHCoeffs[channel * 9 + 1] = -n.y * value[channel];
+        outputSHCoeffs[channel * 9 + 2] = n.z * value[channel];
+        outputSHCoeffs[channel * 9 + 3] = -n.x * value[channel];
+        outputSHCoeffs[channel * 9 + 4] = n.x * n.y * value[channel];
+        outputSHCoeffs[channel * 9 + 5] = -n.y * n.z * value[channel];
+        outputSHCoeffs[channel * 9 + 6] = (3.0f * n.z * n.z - 1.0f) * value[channel];
+        outputSHCoeffs[channel * 9 + 7] = -n.x * n.z * value[channel];
+        outputSHCoeffs[channel * 9 + 8] = (n.x * n.x - n.y * n.y) * value[channel];
+    }
+
+#ifdef SUPPORTS_WAVE_INTRINSICS
+    // Sum each thread result and broadcast
+    for (int i = 0; i < SH_COEFF_COUNT; ++i)
+    {
+        outputSHCoeffs[i] = WaveActiveSum(outputSHCoeffs[i]);
+    }
+#else
+    // Parallel reduction of all threads result.
+    for (uint k = 0; k < FastLog2(SAMPLE_COUNT); ++k)
+    {
+        if ((dispatchThreadId & ((2 << k) - 1)) == (1 << k))
         {
-            _AmbientProbeOutputBuffer[channel * 9 + coeff] *= (ConvolveCosineLobeBandFactor[coeff] * weight);
+            uint index = dispatchThreadId >> (k + 1);
+            for (uint coeff = 0; coeff < SH_COEFF_COUNT; ++coeff)
+            {
+                outputSHCoeffsLDS[index * SH_COEFF_COUNT + coeff] = outputSHCoeffs[coeff];
+            }
+        }
+
+        GroupMemoryBarrierWithGroupSync();
+
+        if ((dispatchThreadId & ((2 << k) - 1)) == 0)
+        {
+            uint index = dispatchThreadId >> (k + 1);
+            for (uint coeff = 0; coeff < SH_COEFF_COUNT; ++coeff)
+            {
+                outputSHCoeffs[coeff] += outputSHCoeffsLDS[index * SH_COEFF_COUNT + coeff];
+            }
+        }
+
+        GroupMemoryBarrierWithGroupSync();
+    }
+#endif
+
+    // Write to memory and convolution + weighing
+    if (dispatchThreadId == 0)
+    {
+        for (uint i = 0; i < SH_COEFF_COUNT; ++i)
+        {
+            _AmbientProbeOutputBuffer[i] = outputSHCoeffs[i] * ConvolveCosineLobeBandFactor[i % 9] * weight;
         }
     }
 }
-
-#undef MIN_DEPTH
