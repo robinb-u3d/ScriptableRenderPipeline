@@ -7,8 +7,14 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 {
     [DisallowMultipleComponent, ExecuteAlways]
     [RequireComponent(typeof(Camera))]
-    public class HDAdditionalCameraData : MonoBehaviour, ISerializationCallbackReceiver
+    public class HDAdditionalCameraData : MonoBehaviour, ISerializationCallbackReceiver, IDebugData
     {
+        public enum FlipYMode
+        {
+            Automatic,
+            ForceFlipY
+        }
+
         [HideInInspector]
         const int currentVersion = 1;
 
@@ -57,6 +63,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         public float aperture = 8f;
         public float shutterSpeed = 1f / 200f;
         public float iso = 400f;
+        public FlipYMode flipYMode;
 
         // Event used to override HDRP rendering for this particular camera.
         public event Action<ScriptableRenderContext, HDCamera> customRender;
@@ -111,12 +118,24 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             //data.isEditorCameraPreview = isEditorCameraPreview;
         }
 
+        public void SetPersistentFrameSettings(FrameSettings settings)
+        {
+            m_FrameSettings = settings;
+            m_frameSettingsIsDirty = true;
+        }
+
         // This is the function use outside to access FrameSettings. It return the current state of FrameSettings for the camera
         // taking into account the customization via the debug menu
         public FrameSettings GetFrameSettings()
         {
             return m_FrameSettingsRuntime;
         }
+
+        // This allows to read serialized value in readonly mode
+        internal T ReadSerializedFrameSettings<T>(Func<FrameSettings, T> reader) where T : struct => reader(m_FrameSettings);
+
+        // IDebugData interface required to reset DebugMenu's FrameSettings
+        Action IDebugData.GetReset() => () => m_FrameSettings.CopyTo(m_FrameSettingsRuntime);
 
         // This function is call at the beginning of camera loop in HDRenderPipeline.Render()
         // It allow to correctly init the m_FrameSettingsRuntime to use.
@@ -132,14 +151,10 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             if (m_frameSettingsIsDirty || assetFrameSettingsIsDirty)
             {
                 // We do a copy of the settings to those effectively used
-                if (renderingPath == RenderingPath.UseGraphicsSettings)
-                {
-                    defaultFrameSettings.CopyTo(m_FrameSettingsRuntime);
-                }
-                else
-                {
-                    m_FrameSettings.Override(defaultFrameSettings).CopyTo(m_FrameSettingsRuntime);
-                }
+                defaultFrameSettings.CopyTo(m_FrameSettingsRuntime);
+
+                if (renderingPath == RenderingPath.Custom)
+                    m_FrameSettings.ApplyOverrideOn(m_FrameSettingsRuntime);
 
                 m_frameSettingsIsDirty = false;
             }
@@ -162,8 +177,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 // doesn't affect the serialized version
                 if (m_camera.cameraType != CameraType.Preview && m_camera.cameraType != CameraType.Reflection)
                 {
-                    FrameSettings.RegisterDebug(m_camera.name, GetFrameSettings());
-                    DebugDisplaySettings.RegisterCamera(m_camera.name);
+                    DebugDisplaySettings.RegisterCamera(m_camera, this);
                 }
                 m_CameraRegisterName = m_camera.name;
                 m_IsDebugRegistered = true;
@@ -179,8 +193,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             {
                 if (m_camera.cameraType != CameraType.Preview && m_camera.cameraType != CameraType.Reflection)
                 {
-                    FrameSettings.UnRegisterDebug(m_CameraRegisterName);
-                    DebugDisplaySettings.UnRegisterCamera(m_CameraRegisterName);
+                    DebugDisplaySettings.UnRegisterCamera(m_camera, this);
                 }
                 m_IsDebugRegistered = false;
             }
