@@ -61,17 +61,9 @@ namespace UnityEngine.Experimental.Rendering.LWRP
                 RenderBufferLoadAction loadOp = RenderBufferLoadAction.Load;
                 RenderBufferStoreAction storeOp = RenderBufferStoreAction.Store;
 
-                if (depthAttachmentHandle != RenderTargetHandle.CameraTarget)
-                {
-                    SetRenderTarget(cmd, colorAttachmentHandle.Identifier(), loadOp, storeOp,
-                        depthAttachmentHandle.Identifier(), loadOp, storeOp, ClearFlag.None, Color.black,
-                        descriptor.dimension);
-                }
-                else
-                {
-                    SetRenderTarget(cmd, colorAttachmentHandle.Identifier(), loadOp, storeOp,
-                        ClearFlag.None, Color.black, descriptor.dimension);
-                }
+                SetRenderTarget(cmd, colorAttachmentHandle.Identifier(), loadOp, storeOp,
+                    depthAttachmentHandle.Identifier(), loadOp, storeOp, ClearFlag.None, Color.black,
+                    descriptor.dimension);
 
                 context.ExecuteCommandBuffer(cmd);
                 cmd.Clear();
