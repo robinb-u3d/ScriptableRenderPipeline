@@ -218,6 +218,12 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 AssetDatabase.CreateAsset(hdrpAsset, "Assets/" + HDProjectSettings.projectSettingsFolderPath + "/" + hdrpAsset.name + ".asset");
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
+
+                GraphicsSettings.renderPipelineAsset = hdrpAsset;
+                if (!hdrpAssetRuntimeResourcesTester())
+                    hdrpAssetRuntimeResourcesResolver();
+                if (!hdrpAssetEditorResourcesTester())
+                    hdrpAssetEditorResourcesResolver();
             }
             GUILayout.EndHorizontal();
 
@@ -356,19 +362,19 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             && defaultVolumeProfileTester();
         void allResolver()
         {
-            if (scriptRuntimeVersionTester())
+            if (!scriptRuntimeVersionTester())
                 scriptRuntimeVersionResolver();
-            if (colorSpaceTester())
+            if (!colorSpaceTester())
                 colorSpaceResolver();
-            if (lightmapTester())
+            if (!lightmapTester())
                 lightmapResolver();
-            if (shadowTester())
+            if (!shadowTester())
                 shadowResolver();
-            if (shadowmaskTester())
+            if (!shadowmaskTester())
                 shadowmaskResolver();
-            if (hdrpAssetTester())
+            if (!hdrpAssetTester())
                 hdrpAssetResolver();
-            if (defaultVolumeProfileTester())
+            if (!defaultVolumeProfileTester())
                 defaultVolumeProfileResolver();
         }
 
@@ -379,13 +385,13 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             && hdrpAssetDiffusionProfileTester();
         void hdrpAssetResolver()
         {
-            if (hdrpAssetUsedTester())
+            if (!hdrpAssetUsedTester())
                 hdrpAssetUsedResolver();
-            if (hdrpAssetRuntimeResourcesTester())
+            if (!hdrpAssetRuntimeResourcesTester())
                 hdrpAssetRuntimeResourcesResolver();
-            if (hdrpAssetEditorResourcesTester())
+            if (!hdrpAssetEditorResourcesTester())
                 hdrpAssetEditorResourcesResolver();
-            if (hdrpAssetDiffusionProfileTester())
+            if (!hdrpAssetDiffusionProfileTester())
                 hdrpAssetDiffusionProfileResolver();
         }
 
