@@ -28,6 +28,14 @@ Shader "Hidden/LightweightPipeline/CameraMotionVectors"
 
             #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Core.hlsl"
 
+            #if defined(USING_STEREO_MATRICES)
+            #define MOTION_VECTORS_MATRIX_PREV_VP _PrevViewProjMatrixStereo[unity_StereoEyeIndex]
+            #define MOTION_VECTORS_MATRIX_NOJ_VP _NonJitteredViewProjMatrixStereo[unity_StereoEyeIndex]
+            #else
+            #define MOTION_VECTORS_MATRIX_PREV_VP _PrevViewProjMatrix
+            #define MOTION_VECTORS_MATRIX_NOJ_VP _NonJitteredViewProjMatrix
+            #endif
+
             TEXTURE2D(_CameraDepthTexture);       SAMPLER(sampler_CameraDepthTexture);
 
             struct VertexInput
@@ -56,9 +64,9 @@ Shader "Hidden/LightweightPipeline/CameraMotionVectors"
 
                 float4 worldPos = float4(posInput.positionWS, 1.0);
                 float4 prevPos = worldPos;
-                
-                float4 prevClipPos = mul(_PrevViewProjMatrix, prevPos);
-                float4 curClipPos = mul(_NonJitteredViewProjMatrix, worldPos);
+
+                float4 prevClipPos = mul(MOTION_VECTORS_MATRIX_PREV_VP, prevPos);
+                float4 curClipPos = mul(MOTION_VECTORS_MATRIX_NOJ_VP, worldPos);
 
                 float2 previousPositionCS = prevClipPos.xy / prevClipPos.w;
                 float2 positionCS = curClipPos.xy / curClipPos.w;

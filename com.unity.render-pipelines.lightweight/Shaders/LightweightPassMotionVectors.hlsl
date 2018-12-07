@@ -3,6 +3,13 @@
 
 #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Core.hlsl"
 
+#if defined(USING_STEREO_MATRICES)
+#define MOTION_VECTORS_MATRIX_PREV_VP _PrevViewProjMatrixStereo[unity_StereoEyeIndex]
+#define MOTION_VECTORS_MATRIX_NOJ_VP _NonJitteredViewProjMatrixStereo[unity_StereoEyeIndex]
+#else
+#define MOTION_VECTORS_MATRIX_PREV_VP _PrevViewProjMatrix
+#define MOTION_VECTORS_MATRIX_NOJ_VP _NonJitteredViewProjMatrix
+#endif
 
 struct Attributes
 {
@@ -33,13 +40,13 @@ Varyings MotionVectorsVertex(Attributes v)
 #else
     o.pos.z += unity_MotionVectorsParams.z * o.pos.w;
 #endif
-    
+
 //#if defined(USING_STEREO_MATRICES)
 //    o.clipPos = mul(_StereoNonJitteredVP[unity_StereoEyeIndex], mul(unity_ObjectToWorld, v.vertex));
 //    o.previousClipPos = mul(_StereoPreviousVP[unity_StereoEyeIndex], mul(_PreviousM, _HasLastPositionData ? float4(v.oldPos, 1) : v.vertex));
 //#else
-    o.clipPos = mul(_NonJitteredViewProjMatrix, mul(UNITY_MATRIX_M, v.position));
-    o.previousClipPos = mul(_PrevViewProjMatrix, mul(unity_MatrixPreviousM, unity_MotionVectorsParams.x == 1 ? float4(v.positionOld, 1) : v.position));
+    o.clipPos = mul(MOTION_VECTORS_MATRIX_NOJ_VP, mul(UNITY_MATRIX_M, v.position));
+    o.previousClipPos = mul(MOTION_VECTORS_MATRIX_PREV_VP, mul(unity_MatrixPreviousM, unity_MotionVectorsParams.x == 1 ? float4(v.positionOld, 1) : v.position));
 //#endif
     return o;
 }

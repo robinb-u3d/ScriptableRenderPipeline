@@ -53,7 +53,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
             public static int _ViewProjMatrixStereo;
             public static int _NonJitteredViewProjMatrixStereo;
             public static int _PrevViewProjMatrixStereo;
-            public static int _InvCameraViewProjMatrixStereo;
+            public static int _InvViewProjMatrixStereo;
 
             public static int _CameraProjection;
             public static int _CameraInvProjection;
@@ -169,7 +169,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
             PerCameraBuffer._ProjectionParams = Shader.PropertyToID("_ProjectionParams");
 
             // Stereo matricies
-            PerCameraStereoBuffer._InvCameraViewProjMatrixStereo = Shader.PropertyToID("_InvCameraViewProjStereo");
+            PerCameraStereoBuffer._InvViewProjMatrixStereo = Shader.PropertyToID("_InvViewProjMatrixStereo");
             PerCameraStereoBuffer._NonJitteredViewProjMatrixStereo = Shader.PropertyToID("_NonJitteredViewProjMatrixStereo");
             PerCameraStereoBuffer._PrevViewProjMatrixStereo = Shader.PropertyToID("_PrevViewProjMatrixStereo");
             PerCameraStereoBuffer._ProjMatrixStereo = Shader.PropertyToID("_ProjMatrixStereo");
@@ -666,7 +666,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
                 invProjMatrixStereo[(int)eye] = Matrix4x4.Inverse(projMatrix);
             }
 
-            Shader.SetGlobalMatrixArray(PerCameraStereoBuffer._InvCameraViewProjMatrixStereo, invViewProjMatrixStereo);
+            Shader.SetGlobalMatrixArray(PerCameraStereoBuffer._InvViewProjMatrixStereo, invViewProjMatrixStereo);
 
             Shader.SetGlobalMatrixArray(PerCameraStereoBuffer._ViewProjMatrixStereo, viewProjMatrixStereo);
             Shader.SetGlobalMatrixArray(PerCameraStereoBuffer._ProjMatrixStereo, projMatrixStereo);
