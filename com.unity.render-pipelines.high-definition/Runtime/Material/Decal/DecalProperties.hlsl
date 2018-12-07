@@ -17,7 +17,7 @@ float _SmoothnessRemapMin;
 float _SmoothnessRemapMax;
 float _AORemapMin;
 float _AORemapMax;
-float _Metallic;
+float _MetallicScale;
 float _DecalColorMapAlphaScale;
 float _DecalMaskMapBlueScale;
 

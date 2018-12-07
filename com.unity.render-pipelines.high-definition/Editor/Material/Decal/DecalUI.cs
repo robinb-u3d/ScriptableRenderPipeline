@@ -26,7 +26,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
  			public static GUIContent meshDecalDepthBiasText = new GUIContent("Mesh decal depth bias", "prevents z-fighting");
 	 		public static GUIContent drawOrderText = new GUIContent("Draw order", "Controls draw order of decal projectors");
             public static GUIContent smoothnessRemappingText = new GUIContent("Smoothness Remapping", "Smoothness remapping");
-            public static GUIContent metallicText = new GUIContent("Metallic", "Metallic");
+            public static GUIContent metallicText = new GUIContent("Metallic Scale", "Metallic Scale");
             public static GUIContent aoRemappingText = new GUIContent("AO Remapping", "AO remapping");
             public static GUIContent colorMapAlphaScaleText = new GUIContent("Base color alpha scale", "Color map alpha scale");
             public static GUIContent maskMapBlueScaleText = new GUIContent("Mask map blue scale", "Mask map blue scale");
@@ -110,8 +110,8 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
         protected MaterialProperty smoothnessRemapMax = new MaterialProperty();
         protected const string kSmoothnessRemapMax = "_SmoothnessRemapMax";
 
-        protected MaterialProperty metallic = new MaterialProperty();
-        protected const string kMetallic = "_Metallic";
+        protected MaterialProperty metallicScale = new MaterialProperty();
+        protected const string kMetallicScale = "_MetallicScale";
 
         protected MaterialProperty colorMapAlphaScale = new MaterialProperty();
         protected const string kColorMapAlphaScale = "_DecalColorMapAlphaScale";
@@ -141,7 +141,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             AORemapMax = FindProperty(kAORemapMax, props);
             smoothnessRemapMin = FindProperty(kSmoothnessRemapMin, props);
             smoothnessRemapMax = FindProperty(kSmoothnessRemapMax, props);
-            metallic = FindProperty(kMetallic, props);
+            metallicScale = FindProperty(kMetallicScale, props);
             colorMapAlphaScale = FindProperty(kColorMapAlphaScale, props);
             maskMapBlueScale = FindProperty(kMaskMapBlueScale, props);
 
@@ -277,7 +277,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                             }
                             EditorGUI.indentLevel--;
                             m_MaterialEditor.ShaderProperty(maskMapBlueScale, Styles.maskMapBlueScaleText);
-                            m_MaterialEditor.ShaderProperty(metallic, Styles.metallicText);
+                            m_MaterialEditor.ShaderProperty(metallicScale, Styles.metallicText);
                             EditorGUILayout.MinMaxSlider(Styles.aoRemappingText, ref AORemapMinValue, ref AORemapMaxValue, 0.0f, 1.0f);
                             EditorGUILayout.MinMaxSlider(Styles.smoothnessRemappingText, ref smoothnessRemapMinValue, ref smoothnessRemapMaxValue, 0.0f, 1.0f);
                         }
