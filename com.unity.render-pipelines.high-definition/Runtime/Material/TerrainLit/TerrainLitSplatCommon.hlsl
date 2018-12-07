@@ -292,27 +292,6 @@ void TerrainSplatBlend(float2 uv, float3 tangentWS, float3 bitangentWS,
         weights[7] = blendMasks1.w;
     #endif
 
-    #if defined(_MASKMAP) && !defined(_TERRAIN_BLEND_HEIGHT)
-        bool densityBlendEnabled = any(useOpacityAsDensityParam0 < 1);
-        #ifdef _TERRAIN_8_LAYERS
-            densityBlendEnabled = densityBlendEnabled || any(useOpacityAsDensityParam1 < 1);
-        #endif
-        // calculate weight of each layers
-        // Algorithm is like this:
-        // Top layer have priority on others layers
-        // If a top layer doesn't use the full weight, the remaining can be use by the following layer.
-        float weightsSum = 0.0;
-
-        if (densityBlendEnabled)
-        {
-            UNITY_UNROLL for (int i = _LAYER_COUNT - 1; i >= 0; --i)
-            {
-                weights[i] = min(weights[i], (1.0 - weightsSum));
-                weightsSum = saturate(weightsSum + weights[i]);
-            }
-        }
-    #endif
-
     outAlbedo = 0;
     outNormalTS = 0;
     float3 outMasks = 0;
