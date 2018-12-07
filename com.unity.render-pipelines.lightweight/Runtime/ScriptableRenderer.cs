@@ -303,8 +303,8 @@ namespace UnityEngine.Experimental.Rendering.LWRP
             }
             
             bool useHDR32 = Application.isMobilePlatform &&
-             SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.RGB111110Float);
-            RenderTextureFormat hdrFormat = (useHDR32) ? RenderTextureFormat.RGB111110Float : RenderTextureFormat.DefaultHDR;
+             SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.ARGB2101010);
+            RenderTextureFormat hdrFormat = (useHDR32) ? RenderTextureFormat.ARGB2101010 : RenderTextureFormat.DefaultHDR;
             desc.colorFormat = cameraData.isHdrEnabled ? hdrFormat : RenderTextureFormat.Default;
 
             desc.enableRandomWrite = false;
