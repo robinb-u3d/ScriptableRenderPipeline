@@ -6,15 +6,29 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [5.3.0-preview] - 2018-11-xx
 
+### Added
+- Added new API to perform a camera rendering
+- Add suport for hair master node (Double kajiya kay - Lambert)
+- Added Reset behaviour in DebugMenu (ingame mapping is right joystick + B)
+
 ### Fixed
 - Fixed logic to disable FPTL with stereo rendering
 - Fixed stacklit transmission and sun highlight
 - Fixed decals with stereo rendering
 - Fixed flip logic for postprocessing + VR
+- Fixed copyStencilBuffer pass for Switch
+- Fixed point light shadow map culling that wasn't taking into account far plane
+- Fixed usage of SSR with transparent on all master node
+- Fixed SSR and microshadowing on fabric material
+- Fixed blit pass for stereo rendering
+- Fixed windows and in-game DebugMenu sync.
+- Fixed FrameSettings' LitShaderMode sync when opening DebugMenu.
+- Fixed Metal specific issues with decals, hitting a sampler limit and compiling AxF shader
 
 ### Changed
 - ColorPyramid compute shader passes is swapped to pixel shader passes on platforms where the later is faster (Nintendo Switch).
 - Removing the simple lightloop used by the simple lit shader
+- Whole refactor of reflection system: Workflow and performance improvement.
 
 ## [5.2.0-preview] - 2018-11-27
 
@@ -39,6 +53,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fixed Distortion blend mode for shader graph master node (Lit, StackLit)
 - Fixed bent Normal for Fabric master node in shader graph
 - Fixed PBR master node lightlayers
+- Fixed shader stripping for built-in lit shaders.
 
 ### Changed
 - Rename "Regular" in Diffusion profile UI "Thick Object"
