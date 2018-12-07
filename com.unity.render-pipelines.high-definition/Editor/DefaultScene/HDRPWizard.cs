@@ -59,6 +59,13 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             public const string hdrpAssetDiffusionProfileError = "There is no diffusion profile assigned in the HDRP asset!";
             public static readonly GUIContent defaultVolumeProfileLabel = EditorGUIUtility.TrTextContent("Default volume profile");
             public const string defaultVolumeProfileError = "Default volume profile must be set to save disk space and share settings!";
+
+            public const string hdrpAssetDisplayDialogTitle = "Create or Load HDRenderPipelineAsset";
+            public const string hdrpAssetDisplayDialogContent = "Do you want to create a fresh HDRenderPipelineAsset in the default resource folder and automatically assign it?";
+            public const string diffusionProfileSettingsDisplayDialogTitle = "Create or Load DiffusionProfileSettings";
+            public const string diffusionProfileSettingsDisplayDialogContent = "Do you want to create a fresh DiffusionProfileSettings in the default resource folder and automatically assign it?";
+            public const string displayDialogCreate = "Create One";
+            public const string displayDialogLoad = "Load One";
         }
 
         //utility class to show only non scene object selection
@@ -121,13 +128,14 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 if (evt.type != EventType.ExecuteCommand)
                     return;
                 string commandName = evt.commandName;
-                if (commandName == ObjectSelectorUpdatedCommand && selectorID == id)
-                {
-                    T current = GetCurrentObject() as T;
-                    assignator(current);
-                    GUI.changed = true;
-                    evt.Use();
-                }
+                if (commandName != ObjectSelectorUpdatedCommand || selectorID != id)
+                    return;
+                T current = GetCurrentObject() as T;
+                if (current == null)
+                    return;
+                assignator(current);
+                GUI.changed = true;
+                evt.Use();
             }
         }
 
@@ -218,10 +226,16 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
 
             GUILayout.EndScrollView();
 
+            // check assignation resolution from Selector
             ObjectSelector.CheckAssignationEvent<VolumeProfile>(x => HDProjectSettings.defaultVolumeProfile = x);
+            ObjectSelector.CheckAssignationEvent<HDRenderPipelineAsset>(x => GraphicsSettings.renderPipelineAsset = x);
+            ObjectSelector.CheckAssignationEvent<DiffusionProfileSettings>(x =>
+            {
+                if (GraphicsSettings.renderPipelineAsset == null || !(GraphicsSettings.renderPipelineAsset is HDRenderPipelineAsset))
+                    return;
+                (GraphicsSettings.renderPipelineAsset as HDRenderPipelineAsset).diffusionProfileSettings = x;
+            });
         }
-
-
 
         void DrawConfigInfo()
         {
@@ -267,10 +281,54 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             EditorGUILayout.Space();
         }
 
-        //T CreateOrLoad<T>(GUIContent label)
-        //{
+        void CreateOrLoad<T>()
+            where T : ScriptableObject
+        {
+            string title;
+            string content;
+            UnityEngine.Object target;
+            if (typeof(T) == typeof(HDRenderPipelineAsset))
+            {
+                title = Style.hdrpAssetDisplayDialogTitle;
+                content = Style.hdrpAssetDisplayDialogContent;
+                target = GraphicsSettings.renderPipelineAsset as HDRenderPipelineAsset;
+            }
+            else if (typeof(T) == typeof(DiffusionProfileSettings))
+            {
+                if (GraphicsSettings.renderPipelineAsset == null || !(GraphicsSettings.renderPipelineAsset is HDRenderPipelineAsset))
+                    throw new Exception("Cannot resolve diffusion profile while HDRenderPipeline is not set!");
+                title = Style.diffusionProfileSettingsDisplayDialogTitle;
+                content = Style.diffusionProfileSettingsDisplayDialogContent;
+                target = (GraphicsSettings.renderPipelineAsset as HDRenderPipelineAsset).diffusionProfileSettings;
+            }
+            else
+                throw new ArgumentException("Unknown type used");
 
-        //}
+            switch(EditorUtility.DisplayDialogComplex(title, content, Style.displayDialogCreate, "Cancel", Style.displayDialogLoad))
+            {
+                case 0: //create
+                    if (!AssetDatabase.IsValidFolder("Assets/" + HDProjectSettings.projectSettingsFolderPath))
+                        AssetDatabase.CreateFolder("Assets", HDProjectSettings.projectSettingsFolderPath);
+                    var asset = ScriptableObject.CreateInstance<T>();
+                    asset.name = typeof(T).Name;
+                    AssetDatabase.CreateAsset(asset, "Assets/" + HDProjectSettings.projectSettingsFolderPath + "/" + asset.name + ".asset");
+                    AssetDatabase.SaveAssets();
+                    AssetDatabase.Refresh();
+
+                    if (typeof(T) == typeof(HDRenderPipelineAsset))
+                        GraphicsSettings.renderPipelineAsset = asset as HDRenderPipelineAsset;
+                    else if (typeof(T) == typeof(DiffusionProfileSettings))
+                        (GraphicsSettings.renderPipelineAsset as HDRenderPipelineAsset).diffusionProfileSettings = asset as DiffusionProfileSettings;
+                    break;
+                case 1: //cancel
+                    break;
+                case 2: //Load
+                    ObjectSelector.Show(target, typeof(T));
+                    break;
+                default:
+                    throw new ArgumentException("Unrecognized option");
+            }
+        }
 
         bool allTester() =>
             scriptRuntimeVersionTester()
@@ -371,14 +429,11 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
         void scriptRuntimeVersionResolver() => PlayerSettings.scriptingRuntimeVersion = ScriptingRuntimeVersion.Latest;
 
         bool hdrpAssetUsedTester() => GraphicsSettings.renderPipelineAsset != null && GraphicsSettings.renderPipelineAsset is HDRenderPipelineAsset;
-        void hdrpAssetUsedResolver()
-        {
-            //ask to use one or create one
-        }
+        void hdrpAssetUsedResolver() => CreateOrLoad<HDRenderPipelineAsset>();
 
         bool hdrpAssetRuntimeResourcesTester() =>
             hdrpAssetUsedTester()
-            || (GraphicsSettings.renderPipelineAsset as HDRenderPipelineAsset).renderPipelineResources != null;
+            && (GraphicsSettings.renderPipelineAsset as HDRenderPipelineAsset).renderPipelineResources != null;
         void hdrpAssetRuntimeResourcesResolver()
         {
             if (!hdrpAssetUsedTester())
@@ -389,7 +444,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
 
         bool hdrpAssetEditorResourcesTester() =>
             hdrpAssetUsedTester()
-            || (GraphicsSettings.renderPipelineAsset as HDRenderPipelineAsset).renderPipelineEditorResources != null;
+            && (GraphicsSettings.renderPipelineAsset as HDRenderPipelineAsset).renderPipelineEditorResources != null;
         void hdrpAssetEditorResourcesResolver()
         {
             if (!hdrpAssetUsedTester())
@@ -400,13 +455,13 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
 
         bool hdrpAssetDiffusionProfileTester() =>
             hdrpAssetUsedTester()
-            || (GraphicsSettings.renderPipelineAsset as HDRenderPipelineAsset).diffusionProfileSettings != null;
+            && (GraphicsSettings.renderPipelineAsset as HDRenderPipelineAsset).diffusionProfileSettings != null;
         void hdrpAssetDiffusionProfileResolver()
         {
             if (!hdrpAssetUsedTester())
                 hdrpAssetUsedResolver();
 
-            //ask to use one or create one
+            CreateOrLoad<DiffusionProfileSettings>();
         }
 
         bool defaultVolumeProfileTester() => HDProjectSettings.defaultVolumeProfile != null;

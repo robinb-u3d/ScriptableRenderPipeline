@@ -34,13 +34,15 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             None,
             First
         }
+#pragma warning disable 414 // never used
         [SerializeField]
         Version version = Version.First;
+#pragma warning restore 414
 
         [SerializeField]
         string m_DefaultVolumeRenderingSettingsPath;
         [SerializeField]
-        string m_ProjectSettingFolderPath = "HDRPProjectSettings";
+        string m_ProjectSettingFolderPath = "HDRPDefaultResources";
         [SerializeField]
         bool m_PopupAtStart = true;
 
