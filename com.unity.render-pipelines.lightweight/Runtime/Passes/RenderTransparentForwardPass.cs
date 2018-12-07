@@ -60,10 +60,8 @@ namespace UnityEngine.Experimental.Rendering.LWRP
             {
                 RenderBufferLoadAction loadOp = RenderBufferLoadAction.Load;
                 RenderBufferStoreAction storeOp = RenderBufferStoreAction.Store;
-
                 SetRenderTarget(cmd, colorAttachmentHandle.Identifier(), loadOp, storeOp,
-                    depthAttachmentHandle.Identifier(), loadOp, storeOp, ClearFlag.None, Color.black,
-                    descriptor.dimension);
+                    depthAttachmentHandle.Identifier(), loadOp, storeOp, ClearFlag.None, Color.black, descriptor.dimension);
 
                 context.ExecuteCommandBuffer(cmd);
                 cmd.Clear();
