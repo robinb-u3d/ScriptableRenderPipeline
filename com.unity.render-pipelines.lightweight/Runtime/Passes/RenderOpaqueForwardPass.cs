@@ -74,7 +74,9 @@ namespace UnityEngine.Experimental.Rendering.LWRP
                 RenderBufferLoadAction depthLoadOp = (CoreUtils.HasFlag(clearFlag, ClearFlag.Depth))
                     ? RenderBufferLoadAction.DontCare
                     : RenderBufferLoadAction.Load;
+
                 RenderBufferStoreAction depthStoreOp = RenderBufferStoreAction.Store;
+
                 SetRenderTarget(cmd, colorAttachmentHandle.Identifier(), colorLoadOp, colorStoreOp,
                     depthAttachmentHandle.Identifier(), depthLoadOp, depthStoreOp, clearFlag, clearColor, descriptor.dimension);
 
