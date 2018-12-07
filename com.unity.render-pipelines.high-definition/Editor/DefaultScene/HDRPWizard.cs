@@ -24,7 +24,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
         static class Style
         {
             public static readonly GUIContent hdrpProjectSettingsPath = EditorGUIUtility.TrTextContent("Default Resources Folder");
-            public static readonly GUIContent firstTimeInit = EditorGUIUtility.TrTextContent("Populate");
+            public static readonly GUIContent firstTimeInit = EditorGUIUtility.TrTextContent("Populate / Reset");
             public static readonly GUIContent defaultVolumeProfile = EditorGUIUtility.TrTextContent("Default Volume Profile", "Shared Volume Profile assigned on new created Volumes.");
             public static readonly GUIContent haveStartPopup = EditorGUIUtility.TrTextContent("Show on start");
 
@@ -195,13 +195,29 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             string changedProjectSettingsFolderPath = EditorGUILayout.DelayedTextField(Style.hdrpProjectSettingsPath, HDProjectSettings.projectSettingsFolderPath);
             if (EditorGUI.EndChangeCheck())
             {
-                //TODO: ask if want to migrate folder content
-
                 HDProjectSettings.projectSettingsFolderPath = changedProjectSettingsFolderPath;
             }
             if (GUILayout.Button(Style.firstTimeInit, EditorStyles.miniButton, GUILayout.Width(100), GUILayout.ExpandWidth(false)))
             {
-                //TODO: create folder if needed and populate content
+                if (!AssetDatabase.IsValidFolder("Assets/" + HDProjectSettings.projectSettingsFolderPath))
+                    AssetDatabase.CreateFolder("Assets", HDProjectSettings.projectSettingsFolderPath);
+                var hdrpAsset = ScriptableObject.CreateInstance<HDRenderPipelineAsset>();
+                hdrpAsset.name = "HDRenderPipelineAsset";
+
+                string defaultVolumeProfilePath = "Assets/" + HDProjectSettings.projectSettingsFolderPath + "/" + hdrpAsset.renderPipelineEditorResources.defaultVolumeProfile.name + ".asset";
+                AssetDatabase.CopyAsset(AssetDatabase.GetAssetPath(hdrpAsset.renderPipelineEditorResources.defaultVolumeProfile), defaultVolumeProfilePath);
+                string defaultDiffusionProfileSettingsPath = "Assets/" + HDProjectSettings.projectSettingsFolderPath + "/" + hdrpAsset.renderPipelineEditorResources.defaultDiffusionProfileSettings.name + ".asset";
+                AssetDatabase.CopyAsset(AssetDatabase.GetAssetPath(hdrpAsset.renderPipelineEditorResources.defaultDiffusionProfileSettings), defaultDiffusionProfileSettingsPath);
+                AssetDatabase.Refresh();
+                
+                HDProjectSettings.defaultVolumeProfile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(defaultVolumeProfilePath);
+
+                var defaultDiffusionProfile = AssetDatabase.LoadAssetAtPath<DiffusionProfileSettings>(defaultDiffusionProfileSettingsPath);
+                hdrpAsset.diffusionProfileSettings = defaultDiffusionProfile;
+
+                AssetDatabase.CreateAsset(hdrpAsset, "Assets/" + HDProjectSettings.projectSettingsFolderPath + "/" + hdrpAsset.name + ".asset");
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
             }
             GUILayout.EndHorizontal();
 
