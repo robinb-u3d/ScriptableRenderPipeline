@@ -34,14 +34,15 @@ namespace UnityEngine.Experimental.Rendering.LWRP
         /// </summary>
         public void Setup(
             RenderTextureDescriptor baseDescriptor,
-            RenderTargetHandle depthAttachmentHandle,
-            SampleCount samples)
+            RenderTargetHandle depthAttachmentHandle)
         {
             this.depthAttachmentHandle = depthAttachmentHandle;
             baseDescriptor.colorFormat = RenderTextureFormat.Depth;
             baseDescriptor.depthBufferBits = kDepthBufferBits;
+
+            // Depth-Only pass don't use MSAA
             baseDescriptor.bindMS = false;
-            baseDescriptor.msaaSamples = (int)samples;
+            baseDescriptor.msaaSamples = 1;
             
             descriptor = baseDescriptor;
         }

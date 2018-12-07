@@ -197,7 +197,7 @@ namespace UnityEngine.Experimental.Rendering.LWRP
 
             if (requiresDepthPrepass)
             {
-                m_DepthOnlyPass.Setup(baseDescriptor, m_DepthTexture, SampleCount.One);
+                m_DepthOnlyPass.Setup(baseDescriptor, m_DepthTexture);
                 renderer.EnqueuePass(m_DepthOnlyPass);
             }
 
