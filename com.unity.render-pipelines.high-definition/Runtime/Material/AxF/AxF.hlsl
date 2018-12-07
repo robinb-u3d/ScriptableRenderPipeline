@@ -18,12 +18,26 @@
 #define CLEAR_COAT_ROUGHNESS 0.03
 #define CLEAR_COAT_PERCEPTUAL_ROUGHNESS RoughnessToPerceptualRoughness(CLEAR_COAT_ROUGHNESS)
 
+//#define FLAKES_JUST_BTF
+// Note: we will use the same LTC transform for the flakes, as both are considered with very low roughness
 #define FLAKES_ROUGHNESS 0.03
 #define FLAKES_PERCEPTUAL_ROUGHNESS RoughnessToPerceptualRoughness(FLAKES_ROUGHNESS)
-#define FLAKES_F0 1.0
+#define FLAKES_F0 0.95
+//#define FLAKES_IOR Fresnel0ToIor(FLAKES_F0) // f0 = 0.95, ior = ~38, makes no sense for dielectric, but is to fake metal with dielectric Fresnel equations
+
+#ifndef FLAKES_JUST_BTF
+#    define IFNOT_FLAKES_JUST_BTF(a) (a)
+#else
+#    define IFNOT_FLAKES_JUST_BTF(a)
+#endif
+
+#define ENVIRONMENT_LD_FUDGE_FACTOR 10.0
+#define LTC_L_FUDGE_FACTOR 1.0
 
 // Define this to sample the environment maps/LTC samples for each lobe, instead of a single sample with an average lobe
 #define USE_COOK_TORRANCE_MULTI_LOBES   1
+#define MAX_NB_LOBES 3
+#define CARPAINT2_LOBE_COUNT max(_CarPaint2_LobeCount,MAX_NB_LOBES)
 
 float3 GetNormalForShadowBias(BSDFData bsdfData)
 {
@@ -198,6 +212,7 @@ real    F_FresnelDieletricSafe(real IOR, real u)
 //----------------------------------------------------------------------
 // Cook-Torrance functions as provided by X-Rite in the "AxF-Decoding-SDK-1.5.1/doc/html/page2.html#carpaint_BrightnessBRDF" document from the SDK
 //
+// Warning: This matches the SDK but is not the Beckmann D() NDF: a /PI is missing!
 float CT_D(float N_H, float m)
 {
     float cosb_sqr = N_H * N_H;
@@ -222,7 +237,7 @@ float3  MultiLobesCookTorrance(float NdotL, float NdotV, float NdotH, float Vdot
         return 0.0;
 
     float   specularIntensity = 0.0;
-    for (uint lobeIndex = 0; lobeIndex < _CarPaint2_LobeCount; lobeIndex++)
+    for (uint lobeIndex = 0; lobeIndex < CARPAINT2_LOBE_COUNT; lobeIndex++)
     {
         float   F0 = _CarPaint2_CTF0s[lobeIndex];
         float   coeff = _CarPaint2_CTCoeffs[lobeIndex];
@@ -362,21 +377,31 @@ struct PreLightData
     float   iblPerceptualRoughness;
     float3  specularFGD;
     float   diffuseFGD;
-#elif defined(_AXF_BRDF_TYPE_CAR_PAINT) & !defined(USE_COOK_TORRANCE_MULTI_LOBES)
+#elif defined(_AXF_BRDF_TYPE_CAR_PAINT) 
+#if !defined(USE_COOK_TORRANCE_MULTI_LOBES)
     float   iblPerceptualRoughness;     // Use this to store an average lobe roughness
+    float   specularCTFGD;
+#else
+    float3  iblPerceptualRoughness;   // per lobe values in xyz
+    float3  specularCTFGD;            // monochromatic FGD, per lobe values in xyz
 #endif
+    float   flakesFGD;
+#endif
+    float   coatFGD;
+    float   coatPartLambdaV;
 
 // Area lights (18 VGPRs)
 // TODO: 'orthoBasisViewNormal' is just a rotation around the normal and should thus be just 1x VGPR.
     float3x3    orthoBasisViewNormal;       // Right-handed view-dependent orthogonal basis around the normal (6x VGPRs)
 #ifdef _AXF_BRDF_TYPE_SVBRDF
     float3x3    ltcTransformDiffuse;    // Inverse transformation                                         (4x VGPRs)
-    float       ltcTransformDiffuse_Amplitude;
     float3x3    ltcTransformSpecular;   // Inverse transformation                                         (4x VGPRs)
-    float3      ltcTransformSpecular_Amplitude;
 #endif
-    float3x3    ltcTransformClearcoat;      // Inverse transformation for GGX                                 (4x VGPRs)
-    float3      ltcTransformClearcoat_Amplitude;
+    float3x3    ltcTransformClearcoat;
+
+#if defined(_AXF_BRDF_TYPE_CAR_PAINT)
+    float3x3    ltcTransformSpecularCT[MAX_NB_LOBES];   // Inverse transformation                                         (4x VGPRs)
+#endif
 };
 
 PreLightData    GetPreLightData(float3 viewWS_Clearcoat, PositionInputs posInput, inout BSDFData bsdfData)
@@ -430,12 +455,12 @@ PreLightData    GetPreLightData(float3 viewWS_Clearcoat, PositionInputs posInput
     float specularReflectivity;
     switch ((_SVBRDF_BRDFType >> 1) & 7)
     {
+    //@TODO: Oren-Nayar diffuse FGD
     case 0:
         GetPreIntegratedFGDWardAndLambert(NdotV_UnderCoat, preLightData.iblPerceptualRoughness, bsdfData.fresnelF0, preLightData.specularFGD, preLightData.diffuseFGD, specularReflectivity);
         break;
 
     // case 1: // @TODO: Support Blinn-Phong FGD?
-
     case 2:
         GetPreIntegratedFGDCookTorranceAndLambert(NdotV_UnderCoat, preLightData.iblPerceptualRoughness, bsdfData.fresnelF0, preLightData.specularFGD, preLightData.diffuseFGD, specularReflectivity);
         break;
@@ -451,19 +476,63 @@ PreLightData    GetPreLightData(float3 viewWS_Clearcoat, PositionInputs posInput
     }
 
 #elif defined(_AXF_BRDF_TYPE_CAR_PAINT)
-#if !USE_COOK_TORRANCE_MULTI_LOBES
-    //-----------------------------------------------------------------------------
-    // Computes weighted average of roughness values
     float2  sumRoughness = 0.0;
-    for (uint lobeIndex = 0; lobeIndex < _CarPaint2_LobeCount; lobeIndex++)
+    float   sumCoeff = 0.0;
+    float   sumF0 = 0.0;
+    float3  tempF0;
+    float   diffuseFGD, reflectivity; //TODO
+    float3  specularFGD;
+
+    for (uint lobeIndex = 0; lobeIndex < CARPAINT2_LOBE_COUNT; lobeIndex++)
     {
+        float   F0 = _CarPaint2_CTF0s[lobeIndex];
         float   coeff = _CarPaint2_CTCoeffs[lobeIndex];
         float   spread = _CarPaint2_CTSpreads[lobeIndex];
-        sumRoughness += coeff * float2(spread, 1);
+#if !USE_COOK_TORRANCE_MULTI_LOBES
+        // Computes weighted average of roughness values
+        sumCoeff += coeff;
+        sumF0 += F0;
+        sumRoughness += float2(spread, 1);
+#else
+        // We also do the pre-integrated FGD fetches here:
+        preLightData.iblPerceptualRoughness[lobeIndex] = RoughnessToPerceptualRoughness(spread);
+
+        GetPreIntegratedFGDCookTorranceAndLambert(NdotV_UnderCoat, preLightData.iblPerceptualRoughness[lobeIndex], F0.xxx, specularFGD, diffuseFGD, reflectivity);
+        preLightData.specularCTFGD[lobeIndex] = specularFGD.x;
+
+        // And the area lights LTC inverse transform:
+        float2   UV = LTCGetSamplingUV(NdotV_UnderCoat, preLightData.iblPerceptualRoughness[lobeIndex]);
+        preLightData.ltcTransformSpecularCT[lobeIndex] = LTCSampleMatrix(UV, LTC_MATRIX_INDEX_COOK_TORRANCE);
+#endif
     }
-    preLightData.iblPerceptualRoughness = RoughnessToPerceptualRoughness(sumRoughness.x / sumRoughness.y);    // Not used if sampling the environment for each Cook-Torrance lobe
+
+#if !USE_COOK_TORRANCE_MULTI_LOBES
+    // Not used if sampling the environment for each Cook-Torrance lobe
+    // Simulate one lobe with averaged roughness and f0
+    float oneOverLobeCnt = rcp(CARPAINT2_LOBE_COUNT);
+    preLightData.iblPerceptualRoughness = RoughnessToPerceptualRoughness(sumRoughness.x / sumRoughness.y);
+    tempF0 = sumF0 * oneOverLobeCnt;
+    GetPreIntegratedFGDCookTorranceAndLambert(NdotV_UnderCoat, preLightData.iblPerceptualRoughness, tempF0, specularFGD, diffuseFGD, reflectivity);
+    preLightData.specularCTFGD = specularFGD.x * sumCoeff;
 #endif
-#endif
+    // preLightData.flakesFGD =
+    //
+    // For flakes, even if they are to be taken as tiny mirrors, the orientation would need to be
+    // captured by a high res normal map with the problems that this implies.
+    // So instead we have a pseudo BTF that is the "left overs" that the CT lobes don't fit, indexed
+    // by two angles (which is theoretically a problem, see comments in GetBRDFColor).
+    // If we wanted to add more variations on top, here we could consider 
+    // a pre-integrated FGD for flakes. 
+    // If we assume very low roughness like the coat, we could also approximate it as being a Fresnel
+    // term like for coatFGD below.
+    // If the f0 is already very high though (metallic flakes), the variations won't be substantial.
+    //
+    // For testing for now:
+    preLightData.flakesFGD = 1.0;
+    GetPreIntegratedFGDGGXAndDisneyDiffuse(NdotV_UnderCoat, FLAKES_PERCEPTUAL_ROUGHNESS, FLAKES_F0, specularFGD, diffuseFGD, reflectivity);
+    IFNOT_FLAKES_JUST_BTF(preLightData.flakesFGD = specularFGD.x);
+
+#endif//#ifdef _AXF_BRDF_TYPE_SVBRDF
 
 
 //-----------------------------------------------------------------------------
@@ -482,12 +551,10 @@ PreLightData    GetPreLightData(float3 viewWS_Clearcoat, PositionInputs posInput
     if (_SVBRDF_BRDFType & 1)
     {
         preLightData.ltcTransformDiffuse = LTCSampleMatrix(UV, LTC_MATRIX_INDEX_OREN_NAYAR);
-        preLightData.ltcTransformDiffuse_Amplitude = 1.0;   // @TODO: Sample Oren-Nayar FGD!
     }
     else
     {
         preLightData.ltcTransformDiffuse = k_identity3x3;   // Lambert
-        preLightData.ltcTransformDiffuse_Amplitude = 1.0;
     }
 
     // Load specular LTC & FGD
@@ -514,29 +581,38 @@ PreLightData    GetPreLightData(float3 viewWS_Clearcoat, PositionInputs posInput
         break;
     }
 
-    // LTC amplitude is actually BRDF's albedo for a given N.V and roughness, which is conveniently the FGD table term we already computed! <3
-    // ref: http://advances.realtimerendering.com/s2016/s2016_ltc_fresnel.pdf
-    preLightData.ltcTransformSpecular_Amplitude = preLightData.specularFGD;
-
 #elif defined(_AXF_BRDF_TYPE_CAR_PAINT)
 
-    // NOTHING TO DO!
+    // already sampled the matrices in our loop for pre-integrated FGD above
 
 #endif  // _AXF_BRDF_TYPE_SVBRDF
 
 // Load clear-coat LTC & FGD
     preLightData.ltcTransformClearcoat = 0.0;
-    preLightData.ltcTransformClearcoat_Amplitude = 0;
+    preLightData.coatFGD = 0;
     if (_Flags & 2)
     {
-        float   clearcoatF0 = IorToFresnel0(bsdfData.clearcoatIOR);
         float2  UV = LTCGetSamplingUV(NdotV_Clearcoat, CLEAR_COAT_PERCEPTUAL_ROUGHNESS);
         preLightData.ltcTransformClearcoat = LTCSampleMatrix(UV, LTC_MATRIX_INDEX_GGX);
-        float   specularReflectivity, dummyDiffuseFGD;
-        GetPreIntegratedFGDGGXAndDisneyDiffuse(NdotV_Clearcoat, CLEAR_COAT_PERCEPTUAL_ROUGHNESS, clearcoatF0, preLightData.ltcTransformClearcoat_Amplitude, dummyDiffuseFGD, specularReflectivity);
 
+        #if 0
+        float   clearcoatF0 = IorToFresnel0(bsdfData.clearcoatIOR);
+        float   specularReflectivity, dummyDiffuseFGD;
+        GetPreIntegratedFGDGGXAndDisneyDiffuse(NdotV_Clearcoat, CLEAR_COAT_PERCEPTUAL_ROUGHNESS, clearcoatF0, preLightData.coatFGD, dummyDiffuseFGD, specularReflectivity);
         // Cheat a little and make the amplitude go to 0 when F0 is 0 (which the actual dieletric Fresnel should do!)
-        preLightData.ltcTransformClearcoat_Amplitude *= smoothstep(0, 0.01, clearcoatF0);
+        preLightData.coatFGD *= smoothstep(0, 0.01, clearcoatF0);
+        #else
+        // We can approximate the pre-integrated FGD term for a near dirac BSDF as the
+        // point evaluation of the Fresnel term itself when L is at the NdotV angle,
+        // which is the split sum environment assumption (cf Lit doing the same with preLightData.coatIblF)
+        // We use expensive Fresnel here so the clearcoat properly disappears when IOR -> 1
+        preLightData.coatFGD = F_FresnelDieletricSafe(bsdfData.clearcoatIOR, NdotV_Clearcoat);
+        #endif
+
+        // For the coat lobe, we need a sharp BSDF for the high smoothness,
+        // See axf-decoding-sdk/doc/html/page1.html#svbrdf_subsec03
+        // we arbitrarily use GGX
+        preLightData.coatPartLambdaV = GetSmithJointGGXPartLambdaV(NdotV_Clearcoat, CLEAR_COAT_ROUGHNESS);
     }
 
     return preLightData;
@@ -580,7 +656,9 @@ void    ComputeClearcoatReflectionAndExtinction_UsePreLightData(inout float3 vie
     float3  H = normalize(viewWS + lightWS);
     float   LdotH = saturate(dot(lightWS, H));
 
-    reflectedRatio = F_FresnelDieletricSafe(bsdfData.clearcoatIOR, LdotH);    // Full reflection in mirror direction (we use expensive Fresnel here so the clearcoat properly disappears when IOR -> 1)
+    reflectedRatio = F_FresnelDieletricSafe(bsdfData.clearcoatIOR, LdotH); // we use expensive Fresnel here so the clearcoat properly disappears when IOR -> 1
+
+    // TODOfixme / TOCHECK
 
     // Compute input/output Fresnel reflections
     float   LdotN = saturate(dot(lightWS, bsdfData.clearcoatNormalWS));
@@ -618,6 +696,7 @@ void ModifyBakedDiffuseLighting(float3 V, PositionInputs posInput, SurfaceData s
 #else
     builtinData.bakeDiffuseLighting *= bsdfData.diffuseColor;
 #endif
+    //TODO attenuate diffuse lighting for coat ie with (1.0 - preLightData.coatFGD)
 }
 
 //-----------------------------------------------------------------------------
@@ -753,24 +832,40 @@ float3  ComputePhong(float3 H, float LdotH, float NdotL, float NdotV, float3 pos
 
 
 // This function applies the BSDF. Assumes that NdotL is positive.
+//_AXF_BRDF_TYPE_SVBRDF version:
 void BSDF(  float3 viewWS_UnderCoat, float3 lightWS_UnderCoat, float NdotL, float3 positionWS, PreLightData preLightData, BSDFData bsdfData,
             out float3 diffuseLighting, out float3 specularLighting)
 {
 
     float3  viewWS_Clearcoat = viewWS_UnderCoat;    // Keep copy before possible refraction
 
+    // Compute half vector used by various components of the BSDF
+    float3  H = normalize(viewWS_UnderCoat + lightWS_UnderCoat);
+    float   NdotH = dot(bsdfData.normalWS, H);
+    float   LdotH = dot(H, lightWS_UnderCoat);
+    float   VdotH = LdotH;
+
+    float   NdotV = ClampNdotV(preLightData.NdotV_UnderCoat);
+    NdotL = dot(bsdfData.normalWS, lightWS_UnderCoat);
+
+
     // Apply clearcoat
     float3  clearcoatExtinction = 1.0;
-    float3  clearcoatReflection = 0.0;
+    float3  clearcoatReflectionLobe = 0.0;
     if (_Flags & 2)
     {
-        ComputeClearcoatReflectionAndExtinction_UsePreLightData(viewWS_UnderCoat, lightWS_UnderCoat, bsdfData, preLightData, clearcoatReflection, clearcoatExtinction);
-        clearcoatReflection *= bsdfData.clearcoatColor / PI;
+        float3 reflectionCoeff;
+        ComputeClearcoatReflectionAndExtinction_UsePreLightData(viewWS_UnderCoat, lightWS_UnderCoat, bsdfData, preLightData, reflectionCoeff, clearcoatExtinction);
+        //TODOfixme: this is wrong, dont want another diffuse here
+        // clearcoatReflection *= bsdfData.clearcoatColor / PI;
+        // See axf-decoding-sdk/doc/html/page1.html#svbrdf_subsec03
+        // the coat is an almost-dirac BSDF lobe like expected.
+        // There's nothing said about clearcoatColor, and it doesn't make sense to actually color its reflections
+        // (we dont do dispersion and the coat must be dielectric so f0 is monochromatic)
+        // TODO: maybe use it as an extinction coefficient like in StackLit or AxF allows
+        // the tint for artistic control.
+        clearcoatReflectionLobe = bsdfData.clearcoatColor * reflectionCoeff * DV_SmithJointGGX(NdotH, NdotL, NdotV, CLEAR_COAT_ROUGHNESS, preLightData.coatPartLambdaV);
     }
-
-    float3  H = normalize(viewWS_UnderCoat + lightWS_UnderCoat);
-    float   LdotH = saturate(dot(H, lightWS_UnderCoat));
-    float   NdotV = ClampNdotV(preLightData.NdotV_UnderCoat);
 
     // Compute diffuse term
     float3  diffuseTerm = Lambert();
@@ -796,7 +891,7 @@ void BSDF(  float3 viewWS_UnderCoat, float3 lightWS_UnderCoat, float NdotL, floa
 
     // We don't multiply by 'bsdfData.diffuseColor' here. It's done only once in PostEvaluateBSDF().
     diffuseLighting = clearcoatExtinction * diffuseTerm;
-    specularLighting = clearcoatExtinction * specularTerm + clearcoatReflection;
+    specularLighting = clearcoatExtinction * specularTerm + clearcoatReflectionLobe;
 }
 
 #elif defined(_AXF_BRDF_TYPE_CAR_PAINT)
@@ -805,19 +900,45 @@ void BSDF(  float3 viewWS_UnderCoat, float3 lightWS_UnderCoat, float NdotL, floa
 float3  GetBRDFColor(float thetaH, float thetaD)
 {
 
-#if 0   // <== Define this to use the code from the documentation
+#if 1   // <== Define this to use the code from the documentation
+
+    // [ Update1:
+    // Enable for now: in short, the color table seems fully defined in the sample tried,
+    // and while acos() yields values up to PI, negative input values shouldn't be used
+    // for cos(thetaH) (under horizon) and for cos(thetaD) shouldn't even be possible. ]
+
     // In the documentation they write that we must divide by PI/2 (it would seem)
     float2  UV = float2(2.0 * thetaH / PI, 2.0 * thetaD / PI);
 #else
-    // But the acos yields values in [0,PI] and the texture seems to be indicating the entire PI range is covered so...
+    // But the acos yields values in [0,PI] and the texture seems to be indicating the entire PI range is covered so:
     float2  UV = float2(thetaH / PI, thetaD / PI);
-#endif
-
     // Problem here is that the BRDF color tables are only defined in the upper-left triangular part of the texture
     // It's not indicated anywhere in the SDK documentation but I decided to clamp to the diagonal otherwise we get black values if UV.x+UV.y > 0.5!
     UV *= 2.0;
     UV *= saturate(UV.x + UV.y) / max(1e-3, UV.x + UV.y);
     UV *= 0.5;
+
+    // Update1:
+    // The above won't work as it displaces the overflow indiscriminately from both thetaH
+    // and thetaD instead of clamping to one or the other.
+
+    // Moreoever, the texture is fully defined for thetaH and thetaD, as it should.
+
+    // Although we should note here that some values of thetaD make no sense depending on phiD
+    // [see "A New Change of Variables for Efficient BRDF Representation by Szymon M. Rusinkiewicz
+    // https://www.cs.princeton.edu/~smr/papers/brdf_change_of_variables/brdf_change_of_variables.pdf
+    // for the definition of these angles],
+    // as when thetaH > 0, in the worst case when phiD = 0, thetaD must be <= (PI/2 - thetaH)
+    // ie when thetaH = PI/2 and phiD = 0, thetaD must be 0,
+    // while all values from 0 to PI/2 of thetaD are possible if phiD = PI/2.
+    // (This is the reason the phiD = PI/2 "slice" contains more information on the BSDF, 
+    //  see also s2012_pbs_disney_brdf_notes_v3.pdf p4-5)
+    //
+    // But with only thetaH and thetaD indexing the table, phiD is ignored, and the
+    // true 3D dependency of a non-anisotropic BSDF is lost in this parameterization.
+
+#endif
+
 
     // Rescale UVs to account for 0.5 texel offset
     uint2   textureSize;
@@ -841,7 +962,7 @@ float3  SamplesFlakes(float2 UV, uint sliceIndex, float mipLevel)
     return _CarPaint2_BTFFlakeMapScale * SAMPLE_TEXTURE2D_ARRAY_LOD(_CarPaint2_BTFFlakeMap, sampler_CarPaint2_BTFFlakeMap, UV, sliceIndex, mipLevel).xyz;
 }
 
-#if 0
+#if 1
 // Original code from the SDK, cleaned up a bit...
 float3  CarPaint_BTF(float thetaH, float thetaD, BSDFData bsdfData)
 {
@@ -899,7 +1020,7 @@ float3  CarPaint_BTF(float thetaH, float thetaD, BSDFData bsdfData)
             {
                 H1_D0 = SamplesFlakes(UVl, LUT0 + thetaH_high, mipLevel);
             }
-            else H1_D0 = H0_D0 ? ?
+            //else H1_D0 = H0_D0 ? ?
         }
 
         if (thetaD_high < _CarPaint2_FlakeMaxThetaI)
@@ -921,9 +1042,15 @@ float3  CarPaint_BTF(float thetaH, float thetaD, BSDFData bsdfData)
     return lerp(D0, D1, thetaD_weight);
 }
 
-#else
+#else //alternate CarPaint_BTF:
 
 // Simplified code
+// Update1: This is not a simplified version of above. In the sample code
+// sampling won't be done for slice indices that overflow, and interpolation
+// of final values is thus done with 0 to effectively fade out the flake 
+// while here with min, this clamp the "lifetime" for the remaining angular
+// range.
+// TOTO_FLAKE 
 float3  CarPaint_BTF(float thetaH, float thetaD, BSDFData bsdfData)
 {
     float2  UV = bsdfData.flakesUV;
@@ -958,23 +1085,17 @@ float3  CarPaint_BTF(float thetaH, float thetaD, BSDFData bsdfData)
     return lerp(D0, D1, thetaD_weight);
 }
 
-#endif
+#endif //...alternate CarPaint_BTF.
 
 
 // This function applies the BSDF. Assumes that NdotL is positive.
+// For _AXF_BRDF_TYPE_CAR_PAINT
 void BSDF(  float3 viewWS_UnderCoat, float3 lightWS_UnderCoat, float NdotL, float3 positionWS, PreLightData preLightData, BSDFData bsdfData,
             out float3 diffuseLighting, out float3 specularLighting)
 {
+    //diffuseLighting = specularLighting = 0;
+    //return;
     float3  viewWS_Clearcoat = viewWS_UnderCoat;    // Keep copy before possible refraction
-
-    // Apply clearcoat
-    float3  clearcoatExtinction = 1.0;
-    float3  clearcoatReflection = 0.0;
-    if (_Flags & 2)
-    {
-        ComputeClearcoatReflectionAndExtinction_UsePreLightData(viewWS_UnderCoat, lightWS_UnderCoat, bsdfData, preLightData, clearcoatReflection, clearcoatExtinction);
-        clearcoatReflection *= bsdfData.clearcoatColor / PI;
-    }
 
     // Compute half vector used by various components of the BSDF
     float3  H = normalize(viewWS_UnderCoat + lightWS_UnderCoat);
@@ -988,6 +1109,19 @@ void BSDF(  float3 viewWS_UnderCoat, float3 lightWS_UnderCoat, float NdotL, floa
     float   thetaH = acos(clamp(NdotH, -1, 1));
     float   thetaD = acos(clamp(LdotH, -1, 1));
 
+    // Apply clearcoat
+    float3  clearcoatExtinction = 1.0;
+    float3  clearcoatReflectionLobe = 0.0;
+    if (_Flags & 2)
+    {
+        float3 reflectionCoeff;
+        ComputeClearcoatReflectionAndExtinction_UsePreLightData(viewWS_UnderCoat, lightWS_UnderCoat, bsdfData, preLightData, reflectionCoeff, clearcoatExtinction);
+        //TODOfixme:
+        // clearcoatReflection *= bsdfData.clearcoatColor / PI;
+        // see axf-decoding-sdk/doc/html/page1.html#svbrdf_subsec03
+        clearcoatReflectionLobe = bsdfData.clearcoatColor * reflectionCoeff * DV_SmithJointGGX(NdotH, NdotL, NdotV, CLEAR_COAT_ROUGHNESS, preLightData.coatPartLambdaV);
+    }
+
     // Simple lambert
     float3  diffuseTerm = Lambert();
 
@@ -1000,14 +1134,17 @@ void BSDF(  float3 viewWS_UnderCoat, float3 lightWS_UnderCoat, float NdotL, floa
     specularTerm *= BRDFColor;
 
     // Apply flakes
+    //TODO_FLAKES
     specularTerm += CarPaint_BTF(thetaH, thetaD, bsdfData);
 
     // We don't multiply by 'bsdfData.diffuseColor' here. It's done only once in PostEvaluateBSDF().
     diffuseLighting = clearcoatExtinction * diffuseTerm;
-    specularLighting = clearcoatExtinction * specularTerm + clearcoatReflection;
+    specularLighting = clearcoatExtinction * specularTerm + clearcoatReflectionLobe;
 }
 
 #else
+
+// No _AXF_BRDF_TYPE
 
 // This function applies the BSDF. Assumes that NdotL is positive.
 void    BSDF(float3 viewWS, float3 lightWS, float NdotL, float3 positionWS, PreLightData preLightData, BSDFData bsdfData,
@@ -1021,7 +1158,7 @@ void    BSDF(float3 viewWS, float3 lightWS, float NdotL, float3 positionWS, PreL
     specularLighting = 0;
 }
 
-#endif
+#endif // _AXF_BRDF_TYPE_SVBRDF
 
 //-----------------------------------------------------------------------------
 // Surface shading (all light types) below
@@ -1196,14 +1333,13 @@ DirectLighting  EvaluateBSDF_Line(  LightLoopContext lightLoopContext,
     // Polygon irradiance in the transformed configuration.
     ltcValue = LTCEvaluate(P1, P2, B, preLightData.ltcTransformDiffuse);
     ltcValue *= lightData.diffuseDimmer;
-    lighting.diffuse = preLightData.ltcTransformDiffuse_Amplitude * ltcValue;
-
+    lighting.diffuse = preLightData.diffuseFGD * ltcValue;
 
     // Evaluate the specular part
     // Polygon irradiance in the transformed configuration.
     ltcValue = LTCEvaluate(P1, P2, B, preLightData.ltcTransformSpecular);
     ltcValue *= lightData.specularDimmer;
-    lighting.specular = bsdfData.specularColor * preLightData.ltcTransformSpecular_Amplitude * ltcValue;
+    lighting.specular = bsdfData.specularColor * preLightData.specularFGD * ltcValue;
 
     //-----------------------------------------------------------------------------
 #elif defined(_AXF_BRDF_TYPE_CAR_PAINT)
@@ -1214,12 +1350,14 @@ DirectLighting  EvaluateBSDF_Line(  LightLoopContext lightLoopContext,
     // Use Lambert for diffuse
     ltcValue = LTCEvaluate(P1, P2, B, k_identity3x3);    // No transform: Lambert uses identity
     ltcValue *= lightData.diffuseDimmer;
-    lighting.diffuse = ltcValue;
+    lighting.diffuse = ltcValue; // no FGD, lambert gives 1
 
     // Evaluate average BRDF response in diffuse direction
     // We project the point onto the area light's plane using the light's forward direction and recompute the light direction from this position
     float3  bestLightWS_Diffuse = ComputeBestLightDirection_Line(lightPositionRWS, -lightData.forward, lightData);
 
+    // TODO_dir: refract light dir here for GetBRDFColor since it is a fresnel-like effect, but
+    // compute LTC / env fetching using *non refracted dir*
     float3  H = normalize(preLightData.viewWS_UnderCoat + bestLightWS_Diffuse);
     float   NdotH = dot(bsdfData.normalWS, H);
     float   VdotH = dot(preLightData.viewWS_UnderCoat, H);
@@ -1233,25 +1371,11 @@ DirectLighting  EvaluateBSDF_Line(  LightLoopContext lightLoopContext,
     //-----------------------------------------------------------------------------
     // Evaluate multi-lobes Cook-Torrance
     // Each CT lobe samples the environment with the appropriate roughness
-    for (uint lobeIndex = 0; lobeIndex < _CarPaint2_LobeCount; lobeIndex++)
+    for (uint lobeIndex = 0; lobeIndex < CARPAINT2_LOBE_COUNT; lobeIndex++)
     {
-        float   F0 = _CarPaint2_CTF0s[lobeIndex];
-        float   coeff = _CarPaint2_CTCoeffs[lobeIndex];
-        float   spread = _CarPaint2_CTSpreads[lobeIndex];
-
-        float   perceptualRoughness = RoughnessToPerceptualRoughness(spread);
-
-        float2      UV = LTCGetSamplingUV(NdotV, perceptualRoughness);
-        float3x3    ltcTransformSpecular = LTCSampleMatrix(UV, LTC_MATRIX_INDEX_COOK_TORRANCE);
-
-        ltcValue = LTCEvaluate(P1, P2, B, ltcTransformSpecular);
-
-        // Apply FGD
-        float3  specularFGD = 1;
-        float   diffuseFGD, reflectivity;
-        GetPreIntegratedFGDCookTorranceAndLambert(NdotV, perceptualRoughness, F0, specularFGD, diffuseFGD, reflectivity);
-
-        lighting.specular += coeff * specularFGD * ltcValue;
+        float   coeff = 4.0 * LTC_L_FUDGE_FACTOR * _CarPaint2_CTCoeffs[lobeIndex];
+        ltcValue = LTCEvaluate(P1, P2, B, preLightData.ltcTransformSpecularCT[lobeIndex]);
+        lighting.specular += coeff * preLightData.specularCTFGD[lobeIndex] * ltcValue;
     }
     lighting.specular *= lightData.specularDimmer;
 
@@ -1259,6 +1383,8 @@ DirectLighting  EvaluateBSDF_Line(  LightLoopContext lightLoopContext,
     // We project the point onto the area light's plane using the reflected view direction and recompute the light direction from this position
     float3  bestLightWS_Specular = ComputeBestLightDirection_Line(lightPositionRWS, preLightData.iblDominantDirectionWS_UnderCoat, lightData);
 
+    // TODO_dir: refract light dir here for GetBRDFColor since it is a fresnel-like effect, but
+    // compute LTC / env fetching using *non refracted dir*
     H = normalize(preLightData.viewWS_UnderCoat + bestLightWS_Specular);
     NdotH = dot(bsdfData.normalWS, H);
     VdotH = dot(preLightData.viewWS_UnderCoat, H);
@@ -1271,18 +1397,19 @@ DirectLighting  EvaluateBSDF_Line(  LightLoopContext lightLoopContext,
 
     //-----------------------------------------------------------------------------
     // Sample flakes as tiny mirrors
+    // (update1: this is not really doing that, more like applying a BTF on a
+    // lobe following the top normalmap. For them being like tiny mirrors, you would
+    // need the N of the flake, and then you end up with the problem of normal aliasing)
+    // TODO_FLAKES: remove this and use the coat ltc transform if roughnesses
+    // are comparable.
+    // TODO_dir NdotV wrong
     float2      UV = LTCGetSamplingUV(NdotV, FLAKES_PERCEPTUAL_ROUGHNESS);
     float3x3    ltcTransformFlakes = LTCSampleMatrix(UV, LTC_MATRIX_INDEX_GGX);
 
     ltcValue = LTCEvaluate(P1, P2, B, ltcTransformFlakes);
     ltcValue *= lightData.specularDimmer;
 
-    // Apply FGD
-    float3  flakes_FGD;
-    float   specularReflectivity, dummyDiffuseFGD;
-    GetPreIntegratedFGDGGXAndDisneyDiffuse(NdotV, FLAKES_PERCEPTUAL_ROUGHNESS, FLAKES_F0, flakes_FGD, dummyDiffuseFGD, specularReflectivity);
-
-    lighting.specular += flakes_FGD * ltcValue * CarPaint_BTF(thetaH, thetaD, bsdfData);
+    lighting.specular += preLightData.flakesFGD * ltcValue * CarPaint_BTF(thetaH, thetaD, bsdfData);
 
 #endif
 
@@ -1293,7 +1420,7 @@ DirectLighting  EvaluateBSDF_Line(  LightLoopContext lightLoopContext,
     {
 
         // Use the complement of FGD value as an approximation of the extinction of the undercoat
-        float3  clearcoatExtinction = 1.0 - preLightData.ltcTransformClearcoat_Amplitude;
+        float3  clearcoatExtinction = 1.0 - preLightData.coatFGD;
 
         // Apply clear-coat extinction to existing lighting
         lighting.diffuse *= clearcoatExtinction;
@@ -1302,7 +1429,7 @@ DirectLighting  EvaluateBSDF_Line(  LightLoopContext lightLoopContext,
         // Then add clear-coat contribution
         ltcValue = LTCEvaluate(P1, P2, B, preLightData.ltcTransformClearcoat);
         ltcValue *= lightData.specularDimmer;
-        lighting.specular += preLightData.ltcTransformClearcoat_Amplitude * ltcValue * (bsdfData.clearcoatColor / PI);
+        lighting.specular += preLightData.coatFGD * ltcValue * bsdfData.clearcoatColor;
     }
 
     // Save ALU by applying 'lightData.color' only once.
@@ -1401,18 +1528,20 @@ DirectLighting  EvaluateBSDF_Rect(LightLoopContext lightLoopContext,
     // Polygon irradiance in the transformed configuration.
     ltcValue = PolygonIrradiance(mul(lightVerts, preLightData.ltcTransformDiffuse));
     ltcValue *= lightData.diffuseDimmer;
-    lighting.diffuse = preLightData.ltcTransformDiffuse_Amplitude * ltcValue;
+    lighting.diffuse = preLightData.diffuseFGD * ltcValue;
 
 
     // Evaluate the specular part
     // Polygon irradiance in the transformed configuration.
     ltcValue = PolygonIrradiance(mul(lightVerts, preLightData.ltcTransformSpecular));
     ltcValue *= lightData.specularDimmer;
-    lighting.specular = bsdfData.specularColor * preLightData.ltcTransformSpecular_Amplitude * ltcValue;
+    lighting.specular = bsdfData.specularColor * preLightData.specularFGD * ltcValue;
 
 #elif defined(_AXF_BRDF_TYPE_CAR_PAINT)
 
     float   NdotV = ClampNdotV(preLightData.NdotV_UnderCoat);
+    // TODO_dir: refract light dir for GetBRDFColor like for FGD since it is a fresnel-like effect, but
+    // compute LTC / env fetching using *non refracted dir*
 
     //-----------------------------------------------------------------------------
     // Use Lambert for diffuse
@@ -1427,6 +1556,9 @@ DirectLighting  EvaluateBSDF_Rect(LightLoopContext lightLoopContext,
     // We project the point onto the area light's plane using the light's forward direction and recompute the light direction from this position
     float3  bestLightWS_Diffuse = ComputeBestLightDirection_Rectangle(lightPositionRWS, -lightData.forward, lightData);
 
+    // TODO_dir: refract light dir for GetBRDFColor here since it is a fresnel-like effect, but
+    // compute LTC / env fetching using *non refracted dir*
+
     float3  H = normalize(preLightData.viewWS_UnderCoat + bestLightWS_Diffuse);
     float   NdotH = dot(bsdfData.normalWS, H);
     float   VdotH = dot(preLightData.viewWS_UnderCoat, H);
@@ -1440,31 +1572,20 @@ DirectLighting  EvaluateBSDF_Rect(LightLoopContext lightLoopContext,
     //-----------------------------------------------------------------------------
     // Evaluate multi-lobes Cook-Torrance
     // Each CT lobe samples the environment with the appropriate roughness
-    for (uint lobeIndex = 0; lobeIndex < _CarPaint2_LobeCount; lobeIndex++)
+    for (uint lobeIndex = 0; lobeIndex < CARPAINT2_LOBE_COUNT; lobeIndex++)
     {
-        float   F0 = _CarPaint2_CTF0s[lobeIndex];
-        float   coeff = _CarPaint2_CTCoeffs[lobeIndex];
-        float   spread = _CarPaint2_CTSpreads[lobeIndex];
-
-        float   perceptualRoughness = RoughnessToPerceptualRoughness(spread);
-
-        float2      UV = LTCGetSamplingUV(NdotV, perceptualRoughness);
-        float3x3    ltcTransformSpecular = LTCSampleMatrix(UV, LTC_MATRIX_INDEX_COOK_TORRANCE);
-
-        ltcValue = PolygonIrradiance(mul(lightVerts, ltcTransformSpecular));
-
-        // Apply FGD
-        float3  specularFGD = 1;
-        float   diffuseFGD, reflectivity;
-        GetPreIntegratedFGDCookTorranceAndLambert(NdotV, perceptualRoughness, F0, specularFGD, diffuseFGD, reflectivity);
-
-        lighting.specular += coeff * specularFGD * ltcValue;
+        float   coeff = 4.0 * LTC_L_FUDGE_FACTOR * _CarPaint2_CTCoeffs[lobeIndex];
+        ltcValue = PolygonIrradiance(mul(lightVerts, preLightData.ltcTransformSpecularCT[lobeIndex]));
+        lighting.specular += coeff * preLightData.specularCTFGD[lobeIndex] * ltcValue;
     }
     lighting.specular *= lightData.specularDimmer;
 
     // Evaluate average BRDF response in specular direction
     // We project the point onto the area light's plane using the reflected view direction and recompute the light direction from this position
     float3  bestLightWS_Specular = ComputeBestLightDirection_Rectangle(lightPositionRWS, preLightData.iblDominantDirectionWS_UnderCoat, lightData);
+
+    // TODO_dir: refract light dir for GetBRDFColor here since it is a fresnel-like effect, but
+    // compute LTC / env fetching using *non refracted dir*
 
     H = normalize(preLightData.viewWS_UnderCoat + bestLightWS_Specular);
     NdotH = dot(bsdfData.normalWS, H);
@@ -1475,21 +1596,18 @@ DirectLighting  EvaluateBSDF_Rect(LightLoopContext lightLoopContext,
 
     lighting.specular *= GetBRDFColor(thetaH, thetaD);
 
-
     //-----------------------------------------------------------------------------
     // Sample flakes as tiny mirrors
+    // TODO_dir NdotV wrong
+    // TODO_FLAKES: remove this and use the coat ltc transform if roughnesses
+    // are comparable.
     float2      UV = LTCGetSamplingUV(NdotV, FLAKES_PERCEPTUAL_ROUGHNESS);
     float3x3    ltcTransformFlakes = LTCSampleMatrix(UV, LTC_MATRIX_INDEX_GGX);
 
     ltcValue = PolygonIrradiance(mul(lightVerts, ltcTransformFlakes));
     ltcValue *= lightData.specularDimmer;
 
-    // Apply FGD
-    float3  flakes_FGD;
-    float   specularReflectivity, dummyDiffuseFGD;
-    GetPreIntegratedFGDGGXAndDisneyDiffuse(NdotV, FLAKES_PERCEPTUAL_ROUGHNESS, FLAKES_F0, flakes_FGD, dummyDiffuseFGD, specularReflectivity);
-
-    lighting.specular += flakes_FGD * ltcValue * CarPaint_BTF(thetaH, thetaD, bsdfData);
+    lighting.specular += preLightData.flakesFGD * ltcValue * CarPaint_BTF(thetaH, thetaD, bsdfData);
 
 #endif
 
@@ -1501,7 +1619,7 @@ DirectLighting  EvaluateBSDF_Rect(LightLoopContext lightLoopContext,
     {
 
         // Use the complement of FGD value as an approximation of the extinction of the undercoat
-        float3  clearcoatExtinction = 1.0 - preLightData.ltcTransformClearcoat_Amplitude;
+        float3  clearcoatExtinction = 1.0 - preLightData.coatFGD;
 
         // Apply clear-coat extinction to existing lighting
         lighting.diffuse *= clearcoatExtinction;
@@ -1510,7 +1628,7 @@ DirectLighting  EvaluateBSDF_Rect(LightLoopContext lightLoopContext,
         // Then add clear-coat contribution
         ltcValue = PolygonIrradiance(mul(lightVerts, preLightData.ltcTransformClearcoat));
         ltcValue *= lightData.specularDimmer;
-        lighting.specular += preLightData.ltcTransformClearcoat_Amplitude * ltcValue * (bsdfData.clearcoatColor / PI);
+        lighting.specular += preLightData.coatFGD * ltcValue * bsdfData.clearcoatColor;
     }
 
     // Save ALU by applying 'lightData.color' only once.
@@ -1585,6 +1703,51 @@ IndirectLighting    EvaluateBSDF_ScreenspaceRefraction( LightLoopContext lightLo
 //-----------------------------------------------------------------------------
 // EvaluateBSDF_Env
 // ----------------------------------------------------------------------------
+float GetEnvMipLevel(EnvLightData lightData, float iblPerceptualRoughness)
+{
+    float iblMipLevel;
+
+    // TODO: We need to match the PerceptualRoughnessToMipmapLevel formula for planar, so we don't do this test (which is specific to our current lightloop)
+    // Specific case for Texture2Ds, their convolution is a gaussian one and not a GGX one - So we use another roughness mip mapping.
+#if !defined(SHADER_API_METAL)
+    if (IsEnvIndexTexture2D(lightData.envIndex))
+    {
+        // Empirical remapping
+        iblMipLevel = PlanarPerceptualRoughnessToMipmapLevel(iblPerceptualRoughness, _ColorPyramidScale.z);
+    }
+    else
+#endif
+    {
+        iblMipLevel = PerceptualRoughnessToMipmapLevel(iblPerceptualRoughness);
+    }
+    return iblMipLevel;
+}
+
+float3 GetModifiedEnvSamplingDir(EnvLightData lightData, float3 N, float3 iblR, float iblPerceptualRoughness, float clampedNdotV)
+{
+    float3 ret = iblR;
+    if (!IsEnvIndexTexture2D(lightData.envIndex)) // ENVCACHETYPE_CUBEMAP
+    {
+        // When we are rough, we tend to see outward shifting of the reflection when at the boundary of the projection volume
+        // Also it appear like more sharp. To avoid these artifact and at the same time get better match to reference we lerp to original unmodified reflection.
+        // Formula is empirical.
+        ret = GetSpecularDominantDir(N, iblR, iblPerceptualRoughness, clampedNdotV);
+        float iblRoughness = PerceptualRoughnessToRoughness(iblPerceptualRoughness);
+        ret = lerp(ret, iblR, saturate(smoothstep(0, 1, iblRoughness * iblRoughness)));
+    }
+    return ret;
+}
+
+IndirectLighting EvaluateBSDF_Env_emp(  LightLoopContext lightLoopContext,
+                                    float3 viewWS_Clearcoat, PositionInputs posInput,
+                                    PreLightData preLightData, EnvLightData lightData, BSDFData bsdfData,
+                                    int _influenceShapeType, int _GPUImageBasedLightingType,
+                                    inout float hierarchyWeight)
+{
+    IndirectLighting lighting;
+    ZERO_INITIALIZE(IndirectLighting, lighting);
+    return lighting;
+}
 
 // _preIntegratedFGD and _CubemapLD are unique for each BRDF
 IndirectLighting EvaluateBSDF_Env(  LightLoopContext lightLoopContext,
@@ -1605,50 +1768,30 @@ IndirectLighting EvaluateBSDF_Env(  LightLoopContext lightLoopContext,
 
     float   NdotV = ClampNdotV(preLightData.NdotV_UnderCoat);
 
+    // TODO_dir: this shouldn't be undercoat.
     float3  environmentSamplingDirectionWS_UnderCoat = preLightData.iblDominantDirectionWS_UnderCoat;
 
 #if defined(_AXF_BRDF_TYPE_SVBRDF)
-    if ((lightData.envIndex & 1) == ENVCACHETYPE_CUBEMAP)
-    {
-        // When we are rough, we tend to see outward shifting of the reflection when at the boundary of the projection volume
-        // Also it appear like more sharp. To avoid these artifact and at the same time get better match to reference we lerp to original unmodified reflection.
-        // Formula is empirical.
-        environmentSamplingDirectionWS_UnderCoat = GetSpecularDominantDir(bsdfData.normalWS, environmentSamplingDirectionWS_UnderCoat, preLightData.iblPerceptualRoughness, NdotV);
-        float   IBLRoughness = PerceptualRoughnessToRoughness(preLightData.iblPerceptualRoughness);
-        environmentSamplingDirectionWS_UnderCoat = lerp(environmentSamplingDirectionWS_UnderCoat, preLightData.iblDominantDirectionWS_UnderCoat, saturate(smoothstep(0, 1, IBLRoughness * IBLRoughness)));
-    }
+    environmentSamplingDirectionWS_UnderCoat = GetModifiedEnvSamplingDir(lightData, bsdfData.normalWS, preLightData.iblDominantDirectionWS_UnderCoat, preLightData.iblPerceptualRoughness, NdotV);
 
     // Note: using _influenceShapeType and projectionShapeType instead of (lightData|proxyData).shapeType allow to make compiler optimization in case the type is know (like for sky)
     EvaluateLight_EnvIntersection(positionWS, bsdfData.normalWS, lightData, _influenceShapeType, environmentSamplingDirectionWS_UnderCoat, weight);
 
-    // TODO: We need to match the PerceptualRoughnessToMipmapLevel formula for planar, so we don't do this test (which is specific to our current lightloop)
-    // Specific case for Texture2Ds, their convolution is a gaussian one and not a GGX one - So we use another roughness mip mapping.
     float   IBLMipLevel;
-#if !defined(SHADER_API_METAL)
-    if (IsEnvIndexTexture2D(lightData.envIndex))
-    {
-        // Empirical remapping
-        IBLMipLevel = PlanarPerceptualRoughnessToMipmapLevel(preLightData.iblPerceptualRoughness, _ColorPyramidScale.z);
-    }
-    else
-#endif
-    {
-        IBLMipLevel = PerceptualRoughnessToMipmapLevel(preLightData.iblPerceptualRoughness);
-    }
+    IBLMipLevel = GetEnvMipLevel(lightData, preLightData.iblPerceptualRoughness);
 
-    //-----------------------------------------------------------------------------
-    // Use FGD as factor for the env map
-    float3  envBRDF = preLightData.specularFGD;
-
-    // Sample the actual environment lighting
+    // Sample the pre-integrated environment lighting
     float4  preLD = SampleEnv(lightLoopContext, lightData.envIndex, environmentSamplingDirectionWS_UnderCoat, IBLMipLevel);
     weight *= preLD.w; // Used by planar reflection to discard pixel
 
-    float3  envLighting = envBRDF * preLD.xyz;
+    float3  envLighting = preLightData.specularFGD * preLD.xyz;
 
     //-----------------------------------------------------------------------------
 #elif defined(_AXF_BRDF_TYPE_CAR_PAINT)
-    // Evaluate BRDF response in specular direction
+    // A part of this BRDF depends on thetaH and thetaD and should thus have entered
+    // the split sum pre-integration. We do a further approximation by pulling those 
+    // terms out and evaluating them in the specular dominant direction,
+    // for BRDFColor and flakes.
     float3  viewWS_UnderCoat = preLightData.viewWS_UnderCoat;
     float3  lightWS_UnderCoat = environmentSamplingDirectionWS_UnderCoat;
 
@@ -1666,54 +1809,49 @@ IndirectLighting EvaluateBSDF_Env(  LightLoopContext lightLoopContext,
     // Each CT lobe samples the environment with the appropriate roughness
     float3  envLighting = 0.0;
     float   sumWeights = 0.0;
-    for (uint lobeIndex = 0; lobeIndex < _CarPaint2_LobeCount; lobeIndex++)
+    for (uint lobeIndex = 0; lobeIndex < CARPAINT2_LOBE_COUNT; lobeIndex++)
     {
-        float   F0 = _CarPaint2_CTF0s[lobeIndex];
         float   coeff = _CarPaint2_CTCoeffs[lobeIndex];
-        float   spread = _CarPaint2_CTSpreads[lobeIndex];
 
-        float   perceptualRoughness = RoughnessToPerceptualRoughness(spread);
-
-        float   lobeIntensity = coeff * CT_D(NdotH, spread) * CT_F(VdotH, F0);
-        float   lobeMipLevel = PerceptualRoughnessToMipmapLevel(perceptualRoughness);
+        float   lobeMipLevel = PerceptualRoughnessToMipmapLevel(preLightData.iblPerceptualRoughness[lobeIndex]);
         float4  preLD = SampleEnv(lightLoopContext, lightData.envIndex, lightWS_UnderCoat, lobeMipLevel);
 
-        // Apply FGD
-        float3  specularFGD = 1;
-        float   diffuseFGD, reflectivity;
-        GetPreIntegratedFGDCookTorranceAndLambert(NdotV, perceptualRoughness, F0, specularFGD, diffuseFGD, reflectivity);
-
-        envLighting += lobeIntensity * specularFGD * preLD.xyz;
+        envLighting += coeff * preLightData.specularCTFGD[lobeIndex] * preLD.xyz;
         sumWeights += preLD.w;
     }
-    envLighting *= G_CookTorrance(NdotH, NdotV, NdotL, VdotH)  // Shadowing/Masking term
-        / (PI * max(1e-3, NdotV * NdotL));
+    // Note: We multiply by 4 since the documentation uses a Cook-Torrance BSDF formula without the /4 from the dH/dV Jacobian,
+    // and since we assume the lobe coefficients are fitted, we assume the effect of this factor to be in those.
+    // However, our pre-integrated FGD uses the proper D() importance sampling method and weight, so that the D() is effectively
+    // cancelled out when integrating FGD, whichever D() you choose to do importance sampling, along with the Jacobian of the
+    // BSDF (FGD integrand) with the Jacobian from doing importance sampling in H while integrating over L.
+    // We thus restitute the * 4 here.
+    // The other term ENVIRONMENT_LD_FUDGE_FACTOR is to match what we seem to get with VRED, presumably a compensation for
+    // the LD itself for the environment.
+    envLighting *= 4.0 * ENVIRONMENT_LD_FUDGE_FACTOR;
     envLighting *= GetBRDFColor(thetaH, thetaD);
 
     // Sample flakes
-    float   flakesMipLevel = 0;   // Flakes are supposed to be perfect mirrors...
+    //TODO_FLAKES
+    float   flakesMipLevel = 0;   // Flakes are supposed to be perfect mirrors
     envLighting += CarPaint_BTF(thetaH, thetaD, bsdfData) * SampleEnv(lightLoopContext, lightData.envIndex, lightWS_UnderCoat, flakesMipLevel).xyz;
 
-    envLighting *= NdotL;
-
-    weight *= sumWeights / _CarPaint2_LobeCount;
+    weight *= sumWeights / CARPAINT2_LOBE_COUNT;
 
 #else
     // Single lobe approach
     // We computed an average mip level stored in preLightData.iblPerceptualRoughness that we use for all CT lobes
-    //
-    float3  envBRDF = MultiLobesCookTorrance(NdotL, NdotV, NdotH, VdotH); // Specular multi-lobes CT
-    envBRDF *= GetBRDFColor(thetaH, thetaD);
-    envBRDF += CarPaint_BTF(thetaH, thetaD, bsdfData);            // Sample flakes
-
-    envBRDF *= NdotL;
+    float   IBLMipLevel;
+    IBLMipLevel = GetEnvMipLevel(lightData, preLightData.iblPerceptualRoughness);
 
     // Sample the actual environment lighting
     float4  preLD = SampleEnv(lightLoopContext, lightData.envIndex, lightWS_UnderCoat, IBLMipLevel);
-    float3  envLighting = envBRDF * preLD.xyz;
-
+    float3  envLighting;
+    
+    envLighting = preLightData.specularCTFGD * 4.0 * ENVIRONMENT_LD_FUDGE_FACTOR * GetBRDFColor(thetaH, thetaD);
+    //TODO_FLAKES
+    envLighting += CarPaint_BTF(thetaH, thetaD, bsdfData);
+    envLighting *= preLD.xyz;
     weight *= preLD.w; // Used by planar reflection to discard pixel
-
 #endif
 
 //-----------------------------------------------------------------------------
@@ -1733,25 +1871,14 @@ IndirectLighting EvaluateBSDF_Env(  LightLoopContext lightLoopContext,
         float3  lightWS_Clearcoat = preLightData.iblDominantDirectionWS_Clearcoat;
         EvaluateLight_EnvIntersection(positionWS, bsdfData.clearcoatNormalWS, lightData, _influenceShapeType, lightWS_Clearcoat, unusedWeight);
 
-        // Evaluate clearcoat fresnel
-#if 1   // Use LdotH ==> Makes more sense! Stick to Cook-Torrance here...
-        float3  H = normalize(viewWS_Clearcoat + lightWS_Clearcoat);
-        float   LdotH = saturate(dot(lightWS_Clearcoat, H));
-        float3  clearcoatF = F_FresnelDieletricSafe(bsdfData.clearcoatIOR, LdotH);
-#else   // Use LdotN
-        float   LdotN = saturate(dot(lightWS_Clearcoat, bsdfData.clearcoatNormalWS));
-        float3  clearcoatF = F_FresnelDieletricSafe(bsdfData.clearcoatIOR, LdotN);
-#endif
-
         // Attenuate environment lighting under the clearcoat by the complement to the Fresnel term
-        envLighting *= 1.0 - clearcoatF;
+        envLighting *= 1.0 - preLightData.coatFGD;
 
-        // Then add the environment lighting reflected by the clearcoat
-        // We assume the BRDF here is perfect mirror so there's no masking/shadowing, only the Fresnel term * clearcoatColor/PI
+        // Then add the environment lighting reflected by the clearcoat (with mip level 0, like mirror)
         float4  preLD = SampleEnv(lightLoopContext, lightData.envIndex, lightWS_Clearcoat, 0.0);
-        envLighting += (bsdfData.clearcoatColor / PI) * clearcoatF * preLD.xyz;
-
-        // Can't attenuate diffuse lighting here, may try to apply something on bakeLighting in PostEvaluateBSDF
+        // TODOfixme
+        //envLighting += (bsdfData.clearcoatColor / PI) * clearcoatF * preLD.xyz;
+        envLighting += preLightData.coatFGD * preLD.xyz * bsdfData.clearcoatColor;
     }
 
     UpdateLightingHierarchyWeights(hierarchyWeight, weight);
