@@ -12,7 +12,7 @@
 
 #define GENERATE_INTRINSIC_INT24_VARIANTS_3_ARGS(FunctionName, BaseIntrinsicName, Parameter0, Parameter1, Parameter2) \
     int   FunctionName(int   Parameter0, int   Parameter1, int   Parameter2) { return BaseIntrinsicName##I24(Parameter0, Parameter1, Parameter2); } \
-    uint  FunctionName(uint  Parameter0, uint  Parameter1, uint  Parameter2) { return BaseIntrinsicName##U24(Parameter0, Parameter1, Parameter2); } 
+    uint  FunctionName(uint  Parameter0, uint  Parameter1, uint  Parameter2) { return BaseIntrinsicName##U24(Parameter0, Parameter1, Parameter2); }
 
 
 #define UNITY_UV_STARTS_AT_TOP 1
@@ -44,7 +44,7 @@
 #define INTRINSIC_WAVE_LOGICAL_OPS
 #define WaveActiveBitAnd __XB_WaveAND
 #define WaveActiveBitOr __XB_WaveOR
-
+#define WaveGetLaneCount() (64)
 
 #define INTRINSIC_BITFIELD_EXTRACT
 uint BitFieldExtract(uint data, uint offset, uint numBits)

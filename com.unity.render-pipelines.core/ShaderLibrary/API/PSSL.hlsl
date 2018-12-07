@@ -26,6 +26,7 @@
 #define INTRINSIC_WAVE_LOGICAL_OPS
 #define WaveActiveBitAnd CrossLaneAnd
 #define WaveActiveBitOr CrossLaneOr
+#define WaveGetLaneCount() (64)
 
 #define INTRINSIC_WAVE_ACTIVE_ALL_ANY
 bool WaveActiveAllTrue(bool expression)
