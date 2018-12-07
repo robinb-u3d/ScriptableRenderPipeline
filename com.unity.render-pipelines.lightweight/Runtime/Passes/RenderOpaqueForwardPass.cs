@@ -75,10 +75,8 @@ namespace UnityEngine.Experimental.Rendering.LWRP
                     ? RenderBufferLoadAction.DontCare
                     : RenderBufferLoadAction.Load;
                 RenderBufferStoreAction depthStoreOp = RenderBufferStoreAction.Store;
-
                 SetRenderTarget(cmd, colorAttachmentHandle.Identifier(), colorLoadOp, colorStoreOp,
-                    depthAttachmentHandle.Identifier(), depthLoadOp, depthStoreOp, clearFlag, clearColor,
-                    descriptor.dimension);
+                    depthAttachmentHandle.Identifier(), depthLoadOp, depthStoreOp, clearFlag, clearColor, descriptor.dimension);
 
                 // TODO: We need a proper way to handle multiple camera/ camera stack. Issue is: multiple cameras can share a same RT
                 // (e.g, split screen games). However devs have to be dilligent with it and know when to clear/preserve color.
