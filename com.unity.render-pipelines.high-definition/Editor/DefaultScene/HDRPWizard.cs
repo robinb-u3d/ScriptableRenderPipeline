@@ -31,11 +31,10 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             //configuration debugger
             public static readonly GUIContent ok = EditorGUIUtility.TrIconContent("Collab");
             public static readonly GUIContent fail = EditorGUIUtility.TrIconContent("CollabError");
-            public static readonly GUIContent okForCurrentQuality = EditorGUIUtility.TrTextContent("OK for the current quality settings.");
             public static readonly GUIContent resolve = EditorGUIUtility.TrTextContent("Fix");
             public static readonly GUIContent resolveAll = EditorGUIUtility.TrTextContent("Fix All");
             public static readonly GUIContent resolveAllQuality = EditorGUIUtility.TrTextContent("Fix All Qualities");
-            public static readonly GUIContent resolveCurrentQuality = EditorGUIUtility.TrTextContent("Fix Current Quality");
+            public static readonly GUIContent resolveAllBuildTarget = EditorGUIUtility.TrTextContent("Fix All Platforms");
             public static readonly GUIContent allConfigurationLabel = EditorGUIUtility.TrTextContent("HDRP configuration");
             public const string allConfigurationError = "There is issue in your configuration. (See below for detail)";
             public static readonly GUIContent colorSpaceLabel = EditorGUIUtility.TrTextContent("Color space");
@@ -62,9 +61,80 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             public const string defaultVolumeProfileError = "Default volume profile must be set to save disk space and share settings!";
         }
 
+        //utility class to show only non scene object selection
+        static class ObjectSelector
+        {
+            static Action<UnityEngine.Object, Type> ShowObjectSelector;
+            static Func<UnityEngine.Object> GetCurrentObject;
+            static Func<int> GetSelectorID;
+            static Action<int> SetSelectorID;
+
+            const string ObjectSelectorUpdatedCommand = "ObjectSelectorUpdated";
+
+            static int id;
+
+            static int selectorID { get => GetSelectorID(); set => SetSelectorID(value); }
+
+            static ObjectSelector()
+            {
+                Type playerSettingsType = typeof(PlayerSettings);
+                Type objectSelectorType = playerSettingsType.Assembly.GetType("UnityEditor.ObjectSelector");
+                var instanceObjectSelectorInfo = objectSelectorType.GetProperty("get", BindingFlags.Static | BindingFlags.Public);
+                var showInfo = objectSelectorType.GetMethod("Show", new[] { typeof(UnityEngine.Object), typeof(Type), typeof(SerializedProperty), typeof(bool) });
+                var objectSelectorVariable = Expression.Variable(objectSelectorType, "objectSelector");
+                var objectParameter = Expression.Parameter(typeof(UnityEngine.Object), "unityObject");
+                var typeParameter = Expression.Parameter(typeof(Type), "type");
+                var showObjectSelectorBlock = Expression.Block(
+                    new[] { objectSelectorVariable },
+                    Expression.Assign(objectSelectorVariable, Expression.Call(null, instanceObjectSelectorInfo.GetGetMethod())),
+                    Expression.Call(objectSelectorVariable, showInfo, objectParameter, typeParameter, Expression.Constant(null, typeof(SerializedProperty)), Expression.Constant(false))
+                    );
+                var showObjectSelectorLambda = Expression.Lambda<Action<UnityEngine.Object, Type>>(showObjectSelectorBlock, objectParameter, typeParameter);
+                ShowObjectSelector = showObjectSelectorLambda.Compile();
+
+                var instanceCall = Expression.Call(null, instanceObjectSelectorInfo.GetGetMethod());
+                var objectSelectorIDField = Expression.Field(instanceCall, "objectSelectorID");
+                var getSelectorIDLambda = Expression.Lambda<Func<int>>(objectSelectorIDField);
+                GetSelectorID = getSelectorIDLambda.Compile();
+
+                var inSelectorIDParam = Expression.Parameter(typeof(int), "value");
+                var setSelectorIDLambda = Expression.Lambda<Action<int>>(Expression.Assign(objectSelectorIDField, inSelectorIDParam), inSelectorIDParam);
+                SetSelectorID = setSelectorIDLambda.Compile();
+
+                var getCurrentObjectInfo = objectSelectorType.GetMethod("GetCurrentObject");
+                var getCurrentObjectLambda = Expression.Lambda<Func<UnityEngine.Object>>(Expression.Call(null, getCurrentObjectInfo));
+                GetCurrentObject = getCurrentObjectLambda.Compile();
+            }
+
+            public static void Show(UnityEngine.Object obj, Type type)
+            {
+                id = GUIUtility.GetControlID("s_ObjectFieldHash".GetHashCode(), FocusType.Keyboard);
+                GUIUtility.keyboardControl = id;
+                ShowObjectSelector(obj, type);
+                selectorID = id;
+            }
+
+            public static void CheckAssignationEvent<T>(Action<T> assignator)
+                where T : UnityEngine.Object
+            {
+                Event evt = Event.current;
+                if (evt.type != EventType.ExecuteCommand)
+                    return;
+                string commandName = evt.commandName;
+                if (commandName == ObjectSelectorUpdatedCommand && selectorID == id)
+                {
+                    T current = GetCurrentObject() as T;
+                    assignator(current);
+                    GUI.changed = true;
+                    evt.Use();
+                }
+            }
+        }
+
         static VolumeProfile s_DefaultVolumeProfile;
 
         Vector2 scrollPos;
+        Rect lastVolumeRect;
 
         VolumeProfile defaultVolumeProfile;
 
@@ -147,7 +217,11 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             }
 
             GUILayout.EndScrollView();
+
+            ObjectSelector.CheckAssignationEvent<VolumeProfile>(x => HDProjectSettings.defaultVolumeProfile = x);
         }
+
+
 
         void DrawConfigInfo()
         {
@@ -161,9 +235,9 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             ++EditorGUI.indentLevel;
             DrawConfigInfoLine(Style.scriptingRuntimeVersionLabel, Style.scriptingRuntimeVersionError, Style.ok, Style.resolve, scriptRuntimeVersionTester, scriptRuntimeVersionResolver);
             DrawConfigInfoLine(Style.colorSpaceLabel, Style.colorSpaceError, Style.ok, Style.resolve, colorSpaceTester, colorSpaceResolver);
-            DrawConfigInfoLine(Style.lightmapLabel, Style.lightmapError, Style.ok, Style.resolve, lightmapTester, lightmapResolver);
-            DrawConfigInfoLine(Style.shadowLabel, Style.shadowError, Style.okForCurrentQuality, Style.resolveAllQuality, shadowTester, shadowResolver);
-            DrawConfigInfoLine(Style.shadowMaskLabel, Style.shadowMaskError, Style.okForCurrentQuality, Style.resolveAllQuality, shadowmaskTester, shadowmaskResolver);
+            DrawConfigInfoLine(Style.lightmapLabel, Style.lightmapError, Style.ok, Style.resolveAllBuildTarget, lightmapTester, lightmapResolver);
+            DrawConfigInfoLine(Style.shadowLabel, Style.shadowError, Style.ok, Style.resolveAllQuality, shadowTester, shadowResolver);
+            DrawConfigInfoLine(Style.shadowMaskLabel, Style.shadowMaskError, Style.ok, Style.resolveAllQuality, shadowmaskTester, shadowmaskResolver);
             DrawConfigInfoLine(Style.hdrpAssetLabel, Style.hdrpAssetError, Style.ok, Style.resolveAll, hdrpAssetTester, hdrpAssetResolver);
             ++EditorGUI.indentLevel;
             DrawConfigInfoLine(Style.hdrpAssetUsedLabel, Style.hdrpAssetUsedError, Style.ok, Style.resolve, hdrpAssetUsedTester, hdrpAssetUsedResolver);
@@ -336,9 +410,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
         }
 
         bool defaultVolumeProfileTester() => HDProjectSettings.defaultVolumeProfile != null;
-        void defaultVolumeProfileResolver()
-        {
-            //ask to use one
-        }
+        void defaultVolumeProfileResolver() => ObjectSelector.Show(HDProjectSettings.defaultVolumeProfile, typeof(VolumeProfile));
     }
 }
+
