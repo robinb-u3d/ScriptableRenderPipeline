@@ -240,7 +240,12 @@ namespace UnityEngine.Experimental.Rendering.LWRP
 
             if (camera.clearFlags == CameraClearFlags.Skybox)
             {
-                m_DrawSkyboxPass.Setup(colorHandle, depthHandle);
+                // We can't combine skybox and render opaques pases if there's a custom render pass in between
+                // them. Ideally we need a render graph here that each render pass declares inputs and output
+                // attachments and their Load/Store action so we figure out properly if we can combine passes
+                // and move to interleaved rendering with RenderPass API. 
+                bool combineWithRenderOpaquesPass = m_AfterOpaquePostProcessPasses.Count == 0;
+                m_DrawSkyboxPass.Setup(baseDescriptor, colorHandle, depthHandle, combineWithRenderOpaquesPass);
                 renderer.EnqueuePass(m_DrawSkyboxPass);
             }
 
