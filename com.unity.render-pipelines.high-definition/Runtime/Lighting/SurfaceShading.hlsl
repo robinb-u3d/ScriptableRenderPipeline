@@ -49,7 +49,7 @@ float3 PreEvaluateDirectionalLightTransmission(BSDFData bsdfData, inout Directio
                 light.shadowMaskSelector.x = -1;
 
                 // We use the precomputed value (based on "baked" thickness).
-                transmittance = bsdfData.transmittance;
+                transmittance = GetTransmittance(bsdfData);
             }
             else
             {
@@ -166,7 +166,7 @@ float3 PreEvaluatePunctualLightTransmission(LightLoopContext lightLoopContext,
             light.contactShadowIndex   = -1;
             light.shadowMaskSelector.x = -1;
 
-            transmittance = bsdfData.transmittance;
+            transmittance = GetTransmittance(bsdfData);
 
             if (!HasFlag(bsdfData.materialFeatures, MATERIALFEATUREFLAGS_TRANSMISSION_MODE_THIN_THICKNESS) && (light.shadowIndex >= 0))
             {
@@ -180,14 +180,15 @@ float3 PreEvaluatePunctualLightTransmission(LightLoopContext lightLoopContext,
                 // Our subsurface scattering models use the semi-infinite planar slab assumption.
                 // Therefore, we need to find the thickness along the normal.
                 // Warning: based on the artist's input, dependence on the NdotL has been disabled.
+				uint diffusionProfile = GetDiffusionProfile(bsdfData);
                 float thicknessInUnits       = (distFrontFaceToLight - distBackFaceToLight) /* * -NdotL */;
-                float thicknessInMeters      = thicknessInUnits * _WorldScales[bsdfData.diffusionProfile].x;
+                float thicknessInMeters      = thicknessInUnits * _WorldScales[diffusionProfile].x;
                 float thicknessInMillimeters = thicknessInMeters * MILLIMETERS_PER_METER;
 
                 // We need to make sure it's not less than the baked thickness to minimize light leaking.
-                float thicknessDelta = max(0, thicknessInMillimeters - bsdfData.thickness);
+                float thicknessDelta = max(0, thicknessInMillimeters - GetThickness(bsdfData));
 
-                float3 S = _ShapeParams[bsdfData.diffusionProfile].rgb;
+                float3 S = _ShapeParams[diffusionProfile].rgb;
 
             #if 0
                 float3 expOneThird = exp(((-1.0 / 3.0) * thicknessDelta) * S);
