@@ -1,4 +1,3 @@
 {
-    "disableBatchMode": true,
-    "disabledOnPlatforms" : ["Darwin"]
+    "disableBatchMode": true
 }
