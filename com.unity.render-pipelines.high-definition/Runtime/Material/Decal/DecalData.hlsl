@@ -5,26 +5,22 @@
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Sampling/SampleUVMapping.hlsl"
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/EntityLighting.hlsl"
 
-#if (SHADERPASS == SHADERPASS_DBUFFER_PROJECTOR)
-void GetSurfaceData(float2 texCoordDS, float4x4 normalToWorld, out DecalSurfaceData surfaceData)
-#elif (SHADERPASS == SHADERPASS_DBUFFER_MESH)
-void GetSurfaceData(FragInputs input, out DecalSurfaceData surfaceData)
-#endif
+void GetSurfaceData(FragInputs input, float3 V, PositionInputs posInput, out DecalSurfaceData surfaceData)
 {
-    surfaceData.baseColor = _BaseColor;
-    surfaceData.normalWS = float4(0,0,0,0);
-    surfaceData.mask = float4(0,0,0,0);
-	surfaceData.MAOSBlend = float2(0, 0);
-    surfaceData.HTileMask = 0;
 #if (SHADERPASS == SHADERPASS_DBUFFER_PROJECTOR)
+    // With inspector version of decal we can use instancing to get normal to world access
+    float4x4 normalToWorld = UNITY_ACCESS_INSTANCED_PROP(matrix, _NormalToWorld);
     float albedoMapBlend = clamp(normalToWorld[0][3], 0.0f, 1.0f);
     float2 scale = float2(normalToWorld[3][0], normalToWorld[3][1]);
     float2 offset = float2(normalToWorld[3][2], normalToWorld[3][3]);
-	float2 texCoords = texCoordDS * scale + offset;
+	float2 texCoords = input.texCoord0.xy * scale + offset;
 #elif (SHADERPASS == SHADERPASS_DBUFFER_MESH)
 	float albedoMapBlend = _DecalBlend;
 	float2 texCoords = input.texCoord0.xy;
 #endif
+
+    ZERO_INITIALIZE(DecalSurfaceData, surfaceData);
+    surfaceData.baseColor = _BaseColor;
 
 #if _COLORMAP
     surfaceData.baseColor *= SAMPLE_TEXTURE2D(_BaseColorMap, sampler_BaseColorMap, texCoords);    
@@ -58,7 +54,7 @@ void GetSurfaceData(FragInputs input, out DecalSurfaceData surfaceData)
     // We need to normalize as we use mikkt tangent space and this is expected (tangent space is not normalize)
     float3 normalWS = normalize(TransformTangentToWorld(normalTS, input.worldToTangent));
 #endif
-	surfaceData.normalWS.xyz = normalWS * 0.5f + 0.5f;
+	surfaceData.normalWS.xyz = normalWS;
 	surfaceData.HTileMask |= DBUFFERHTILEBIT_NORMAL;
 	surfaceData.normalWS.w = _NormalBlendSrc ? maskMapBlend : albedoMapBlend;
 #endif
