@@ -257,10 +257,10 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 AssetDatabase.Refresh();
 
                 GraphicsSettings.renderPipelineAsset = hdrpAsset;
-                if (!hdrpAssetRuntimeResourcesTester())
-                    hdrpAssetRuntimeResourcesResolver();
-                if (!hdrpAssetEditorResourcesTester())
-                    hdrpAssetEditorResourcesResolver();
+                if (!IsHdrpAssetRuntimeResourcesCorrect())
+                    FixHdrpAssetRuntimeResources();
+                if (!IsHdrpAssetEditorResourcesCorrect())
+                    FixHdrpAssetEditorResources();
             }
             GUILayout.EndHorizontal();
 
@@ -301,24 +301,24 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField(Style.allConfigurationLabel, EditorStyles.boldLabel);
             GUILayout.FlexibleSpace();
-            if (!allTester() && GUILayout.Button(Style.resolveAll, EditorStyles.miniButton, GUILayout.Width(100), GUILayout.ExpandWidth(false)))
-                allResolver();
+            if (!IsAllCorrect() && GUILayout.Button(Style.resolveAll, EditorStyles.miniButton, GUILayout.Width(100), GUILayout.ExpandWidth(false)))
+                FixAll();
             EditorGUILayout.EndHorizontal();
 
             ++EditorGUI.indentLevel;
-            DrawConfigInfoLine(Style.scriptingRuntimeVersionLabel, Style.scriptingRuntimeVersionError, Style.ok, Style.resolve, scriptRuntimeVersionTester, scriptRuntimeVersionResolver);
-            DrawConfigInfoLine(Style.colorSpaceLabel, Style.colorSpaceError, Style.ok, Style.resolve, colorSpaceTester, colorSpaceResolver);
-            DrawConfigInfoLine(Style.lightmapLabel, Style.lightmapError, Style.ok, Style.resolveAllBuildTarget, lightmapTester, lightmapResolver);
-            DrawConfigInfoLine(Style.shadowLabel, Style.shadowError, Style.ok, Style.resolveAllQuality, shadowTester, shadowResolver);
-            DrawConfigInfoLine(Style.shadowMaskLabel, Style.shadowMaskError, Style.ok, Style.resolveAllQuality, shadowmaskTester, shadowmaskResolver);
-            DrawConfigInfoLine(Style.hdrpAssetLabel, Style.hdrpAssetError, Style.ok, Style.resolveAll, hdrpAssetTester, hdrpAssetResolver);
+            DrawConfigInfoLine(Style.scriptingRuntimeVersionLabel, Style.scriptingRuntimeVersionError, Style.ok, Style.resolve, IsScriptRuntimeVersionCorrect, FixScriptRuntimeVersion);
+            DrawConfigInfoLine(Style.colorSpaceLabel, Style.colorSpaceError, Style.ok, Style.resolve, IsColorSpaceCorrect, FixColorSpace);
+            DrawConfigInfoLine(Style.lightmapLabel, Style.lightmapError, Style.ok, Style.resolveAllBuildTarget, IsLightmapCorrect, FixLightmap);
+            DrawConfigInfoLine(Style.shadowLabel, Style.shadowError, Style.ok, Style.resolveAllQuality, IsShadowCorrect, FixShadow);
+            DrawConfigInfoLine(Style.shadowMaskLabel, Style.shadowMaskError, Style.ok, Style.resolveAllQuality, IsShadowmaskCorrect, FixShadowmask);
+            DrawConfigInfoLine(Style.hdrpAssetLabel, Style.hdrpAssetError, Style.ok, Style.resolveAll, IsHdrpAssetCorrect, FixHdrpAsset);
             ++EditorGUI.indentLevel;
-            DrawConfigInfoLine(Style.hdrpAssetUsedLabel, Style.hdrpAssetUsedError, Style.ok, Style.resolve, hdrpAssetUsedTester, hdrpAssetUsedResolver);
-            DrawConfigInfoLine(Style.hdrpAssetRuntimeResourcesLabel, Style.hdrpAssetRuntimeResourcesError, Style.ok, Style.resolve, hdrpAssetRuntimeResourcesTester, hdrpAssetRuntimeResourcesResolver);
-            DrawConfigInfoLine(Style.hdrpAssetEditorResourcesLabel, Style.hdrpAssetEditorResourcesError, Style.ok, Style.resolve, hdrpAssetEditorResourcesTester, hdrpAssetEditorResourcesResolver);
-            DrawConfigInfoLine(Style.hdrpAssetDiffusionProfileLabel, Style.hdrpAssetDiffusionProfileError, Style.ok, Style.resolve, hdrpAssetDiffusionProfileTester, hdrpAssetDiffusionProfileResolver);
+            DrawConfigInfoLine(Style.hdrpAssetUsedLabel, Style.hdrpAssetUsedError, Style.ok, Style.resolve, IsHdrpAssetUsedCorrect, FixHdrpAssetUsed);
+            DrawConfigInfoLine(Style.hdrpAssetRuntimeResourcesLabel, Style.hdrpAssetRuntimeResourcesError, Style.ok, Style.resolve, IsHdrpAssetRuntimeResourcesCorrect, FixHdrpAssetRuntimeResources);
+            DrawConfigInfoLine(Style.hdrpAssetEditorResourcesLabel, Style.hdrpAssetEditorResourcesError, Style.ok, Style.resolve, IsHdrpAssetEditorResourcesCorrect, FixHdrpAssetEditorResources);
+            DrawConfigInfoLine(Style.hdrpAssetDiffusionProfileLabel, Style.hdrpAssetDiffusionProfileError, Style.ok, Style.resolve, IsHdrpAssetDiffusionProfileCorrect, FixHdrpAssetDiffusionProfile);
             --EditorGUI.indentLevel;
-            DrawConfigInfoLine(Style.defaultVolumeProfileLabel, Style.defaultVolumeProfileError, Style.ok, Style.resolve, defaultVolumeProfileTester, defaultVolumeProfileResolver);
+            DrawConfigInfoLine(Style.defaultVolumeProfileLabel, Style.defaultVolumeProfileError, Style.ok, Style.resolve, IsDefaultVolumeProfileCorrect, FixDefaultVolumeProfile);
             --EditorGUI.indentLevel;
         }
 
@@ -389,53 +389,53 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             }
         }
 
-        bool allTester() =>
-            scriptRuntimeVersionTester()
-            && lightmapTester()
-            && shadowTester()
-            && shadowmaskTester()
-            && colorSpaceTester()
-            && hdrpAssetTester()
-            && defaultVolumeProfileTester();
-        void allResolver()
+        bool IsAllCorrect() =>
+            IsScriptRuntimeVersionCorrect()
+            && IsLightmapCorrect()
+            && IsShadowCorrect()
+            && IsShadowmaskCorrect()
+            && IsColorSpaceCorrect()
+            && IsHdrpAssetCorrect()
+            && IsDefaultVolumeProfileCorrect();
+        void FixAll()
         {
-            if (!scriptRuntimeVersionTester())
-                scriptRuntimeVersionResolver();
-            if (!colorSpaceTester())
-                colorSpaceResolver();
-            if (!lightmapTester())
-                lightmapResolver();
-            if (!shadowTester())
-                shadowResolver();
-            if (!shadowmaskTester())
-                shadowmaskResolver();
-            if (!hdrpAssetTester())
-                hdrpAssetResolver();
-            if (!defaultVolumeProfileTester())
-                defaultVolumeProfileResolver();
+            if (!IsScriptRuntimeVersionCorrect())
+                FixScriptRuntimeVersion();
+            if (!IsColorSpaceCorrect())
+                FixColorSpace();
+            if (!IsLightmapCorrect())
+                FixLightmap();
+            if (!IsShadowCorrect())
+                FixShadow();
+            if (!IsShadowmaskCorrect())
+                FixShadowmask();
+            if (!IsHdrpAssetCorrect())
+                FixHdrpAsset();
+            if (!IsDefaultVolumeProfileCorrect())
+                FixDefaultVolumeProfile();
         }
 
-        bool hdrpAssetTester() =>
-            hdrpAssetUsedTester()
-            && hdrpAssetRuntimeResourcesTester()
-            && hdrpAssetEditorResourcesTester()
-            && hdrpAssetDiffusionProfileTester();
-        void hdrpAssetResolver()
+        bool IsHdrpAssetCorrect() =>
+            IsHdrpAssetUsedCorrect()
+            && IsHdrpAssetRuntimeResourcesCorrect()
+            && IsHdrpAssetEditorResourcesCorrect()
+            && IsHdrpAssetDiffusionProfileCorrect();
+        void FixHdrpAsset()
         {
-            if (!hdrpAssetUsedTester())
-                hdrpAssetUsedResolver();
-            if (!hdrpAssetRuntimeResourcesTester())
-                hdrpAssetRuntimeResourcesResolver();
-            if (!hdrpAssetEditorResourcesTester())
-                hdrpAssetEditorResourcesResolver();
-            if (!hdrpAssetDiffusionProfileTester())
-                hdrpAssetDiffusionProfileResolver();
+            if (!IsHdrpAssetUsedCorrect())
+                FixHdrpAssetUsed();
+            if (!IsHdrpAssetRuntimeResourcesCorrect())
+                FixHdrpAssetRuntimeResources();
+            if (!IsHdrpAssetEditorResourcesCorrect())
+                FixHdrpAssetEditorResources();
+            if (!IsHdrpAssetDiffusionProfileCorrect())
+                FixHdrpAssetDiffusionProfile();
         }
 
-        bool colorSpaceTester() => PlayerSettings.colorSpace == ColorSpace.Linear;
-        void colorSpaceResolver() => PlayerSettings.colorSpace = ColorSpace.Linear;
+        bool IsColorSpaceCorrect() => PlayerSettings.colorSpace == ColorSpace.Linear;
+        void FixColorSpace() => PlayerSettings.colorSpace = ColorSpace.Linear;
 
-        bool lightmapTester()
+        bool IsLightmapCorrect()
         {
             // Shame alert: plateform supporting Encodement are partly hardcoded
             // in editor (Standalone) and for the other part, it is all in internal code.
@@ -444,7 +444,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 && GetLightmapEncodingQualityForPlatformGroup(BuildTargetGroup.Lumin) == LightmapEncodingQualityCopy.High
                 && GetLightmapEncodingQualityForPlatformGroup(BuildTargetGroup.WSA) == LightmapEncodingQualityCopy.High;
         }
-        void lightmapResolver()
+        void FixLightmap()
         {
             SetLightmapEncodingQualityForPlatformGroup(BuildTargetGroup.Standalone, LightmapEncodingQualityCopy.High);
             SetLightmapEncodingQualityForPlatformGroup(BuildTargetGroup.Android, LightmapEncodingQualityCopy.High);
@@ -452,12 +452,12 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             SetLightmapEncodingQualityForPlatformGroup(BuildTargetGroup.WSA, LightmapEncodingQualityCopy.High);
         }
 
-        bool shadowTester()
+        bool IsShadowCorrect()
         {
             //QualitySettings.SetQualityLevel.set quality is too costy to be use at frame
             return QualitySettings.shadows == ShadowQuality.All;
         }
-        void shadowResolver()
+        void FixShadow()
         {
             int currentQuality = QualitySettings.GetQualityLevel();
             for (int i = 0; i < QualitySettings.names.Length; ++i)
@@ -468,12 +468,12 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             QualitySettings.SetQualityLevel(currentQuality, applyExpensiveChanges: false);
         }
 
-        bool shadowmaskTester()
+        bool IsShadowmaskCorrect()
         {
             //QualitySettings.SetQualityLevel.set quality is too costy to be use at frame
             return QualitySettings.shadowmaskMode == ShadowmaskMode.DistanceShadowmask;
         }
-        void shadowmaskResolver()
+        void FixShadowmask()
         {
             int currentQuality = QualitySettings.GetQualityLevel();
             for (int i = 0; i < QualitySettings.names.Length; ++i)
@@ -484,47 +484,47 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             QualitySettings.SetQualityLevel(currentQuality, applyExpensiveChanges: false);
         }
 
-        bool scriptRuntimeVersionTester() => PlayerSettings.scriptingRuntimeVersion == ScriptingRuntimeVersion.Latest;
-        void scriptRuntimeVersionResolver() => PlayerSettings.scriptingRuntimeVersion = ScriptingRuntimeVersion.Latest;
+        bool IsScriptRuntimeVersionCorrect() => PlayerSettings.scriptingRuntimeVersion == ScriptingRuntimeVersion.Latest;
+        void FixScriptRuntimeVersion() => PlayerSettings.scriptingRuntimeVersion = ScriptingRuntimeVersion.Latest;
 
-        bool hdrpAssetUsedTester() => GraphicsSettings.renderPipelineAsset != null && GraphicsSettings.renderPipelineAsset is HDRenderPipelineAsset;
-        void hdrpAssetUsedResolver() => CreateOrLoad<HDRenderPipelineAsset>();
+        bool IsHdrpAssetUsedCorrect() => GraphicsSettings.renderPipelineAsset != null && GraphicsSettings.renderPipelineAsset is HDRenderPipelineAsset;
+        void FixHdrpAssetUsed() => CreateOrLoad<HDRenderPipelineAsset>();
 
-        bool hdrpAssetRuntimeResourcesTester() =>
-            hdrpAssetUsedTester()
+        bool IsHdrpAssetRuntimeResourcesCorrect() =>
+            IsHdrpAssetUsedCorrect()
             && (GraphicsSettings.renderPipelineAsset as HDRenderPipelineAsset).renderPipelineResources != null;
-        void hdrpAssetRuntimeResourcesResolver()
+        void FixHdrpAssetRuntimeResources()
         {
-            if (!hdrpAssetUsedTester())
-                hdrpAssetUsedResolver();
+            if (!IsHdrpAssetUsedCorrect())
+                FixHdrpAssetUsed();
             (GraphicsSettings.renderPipelineAsset as HDRenderPipelineAsset).renderPipelineResources
                 = AssetDatabase.LoadAssetAtPath<RenderPipelineResources>(HDUtils.GetHDRenderPipelinePath() + "Runtime/RenderPipelineResources/HDRenderPipelineResources.asset");
         }
 
-        bool hdrpAssetEditorResourcesTester() =>
-            hdrpAssetUsedTester()
+        bool IsHdrpAssetEditorResourcesCorrect() =>
+            IsHdrpAssetUsedCorrect()
             && (GraphicsSettings.renderPipelineAsset as HDRenderPipelineAsset).renderPipelineEditorResources != null;
-        void hdrpAssetEditorResourcesResolver()
+        void FixHdrpAssetEditorResources()
         {
-            if (!hdrpAssetUsedTester())
-                hdrpAssetUsedResolver();
+            if (!IsHdrpAssetUsedCorrect())
+                FixHdrpAssetUsed();
             (GraphicsSettings.renderPipelineAsset as HDRenderPipelineAsset).renderPipelineEditorResources
                 = AssetDatabase.LoadAssetAtPath<HDRenderPipelineEditorResources>(HDUtils.GetHDRenderPipelinePath() + "Editor/RenderPipelineResources/HDRenderPipelineEditorResources.asset");
         }
 
-        bool hdrpAssetDiffusionProfileTester() =>
-            hdrpAssetUsedTester()
+        bool IsHdrpAssetDiffusionProfileCorrect() =>
+            IsHdrpAssetUsedCorrect()
             && (GraphicsSettings.renderPipelineAsset as HDRenderPipelineAsset).diffusionProfileSettings != null;
-        void hdrpAssetDiffusionProfileResolver()
+        void FixHdrpAssetDiffusionProfile()
         {
-            if (!hdrpAssetUsedTester())
-                hdrpAssetUsedResolver();
+            if (!IsHdrpAssetUsedCorrect())
+                FixHdrpAssetUsed();
 
             CreateOrLoad<DiffusionProfileSettings>();
         }
 
-        bool defaultVolumeProfileTester() => HDProjectSettings.defaultVolumeProfile != null;
-        void defaultVolumeProfileResolver() => ObjectSelector.Show(HDProjectSettings.defaultVolumeProfile, typeof(VolumeProfile));
+        bool IsDefaultVolumeProfileCorrect() => HDProjectSettings.defaultVolumeProfile != null;
+        void FixDefaultVolumeProfile() => ObjectSelector.Show(HDProjectSettings.defaultVolumeProfile, typeof(VolumeProfile));
     }
 }
 
