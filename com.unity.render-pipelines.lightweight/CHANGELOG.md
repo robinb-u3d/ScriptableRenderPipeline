@@ -10,9 +10,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - You can now inject a custom render pass before rendering opaque objects. To do so, implement an `IBeforeRender` interface.
 
 ### Changed
+- LWRP now uses non-square shadowmap textures when rendering directional shadows with 2 shadow cascades. 
+- LWRP now uses ARGB2101010 as the HDR format on mobile devices, when this format is supported.
 - Removed `IAfterDepthPrePass` interface.
 
 ### Fixed
+- Several tweaks to reduce bandwidth consumption on mobile devices.
 - The foldouts in the Lightweight Asset inspector UI now remember their state.
 - Added missing meta file for GizmosRenderingPass.cs.
 - Fixed artifacts when using multiple or Depth Only cameras. [Case 1072615](https://issuetracker.unity3d.com/issues/ios-using-multiple-cameras-in-the-scene-in-lightweight-render-pipeline-gives-corrupted-image-in-ios-device)
