@@ -141,6 +141,12 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             SceneManager.MoveGameObjectToScene(root, scene);
             root.transform.DetachChildren();
             GameObject.DestroyImmediate(root);
+
+            //use default defined postprocess in scene instanciated by prefab
+            foreach (var volume in GameObject.FindObjectsOfType<Volume>())
+            {
+                volume.sharedProfile = HDProjectSettings.defaultVolumeProfile;
+            }
         }
     }
 }
