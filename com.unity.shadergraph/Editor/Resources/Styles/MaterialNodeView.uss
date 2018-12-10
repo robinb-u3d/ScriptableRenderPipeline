@@ -14,6 +14,10 @@ MaterialNodeView.graphElement.node.MaterialNode.hovered > #selection-border{
     border-bottom-width:2;
 }
 
+MaterialNodeView.master {
+    min-width: 200;
+}
+
 MaterialNodeView #collapsible-area {
     width: 0;
     height: 0;
