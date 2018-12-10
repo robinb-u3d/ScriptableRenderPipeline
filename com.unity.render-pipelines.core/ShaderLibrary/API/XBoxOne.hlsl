@@ -79,6 +79,11 @@ bool WaveIsFirstLane()
     return (__XB_MBCNT64(WaveActiveBallot(true))) == 0;
 }
 
+uint GetWaveID()
+{
+    return __XB_GetWaveID();
+}
+
 #define INTRINSIC_MINMAX3
 GENERATE_INTRINSIC_VARIANTS_3_ARGS(Min3, __XB_Min3_, a, b, c);
 GENERATE_INTRINSIC_VARIANTS_3_ARGS(Max3, __XB_Max3_, a, b, c);
