@@ -227,9 +227,6 @@ namespace UnityEngine.Rendering.LWRP
                 InitializeRenderingData(settings, ref cameraData, ref cullResults,
                     renderer.maxVisibleAdditionalLights, renderer.maxPerObjectAdditionalLights, out var renderingData);
 
-                if (cameraData.postProcessEnabled)
-                    cameraData.postProcessLayer.UpdateVolumeSystem(cameraData.camera, cmd);
-
                 renderer.Clear();
 
                 var rendererSetup = setup ?? settings.rendererSetup;
