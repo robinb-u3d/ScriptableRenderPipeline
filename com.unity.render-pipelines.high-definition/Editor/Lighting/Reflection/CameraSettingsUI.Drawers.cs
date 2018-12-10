@@ -89,6 +89,10 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
 
             if ((displayedFields.camera & CameraSettingsFields.frameSettings) != 0)
             {
+                //Warning, fullscreenPassThrough have been removed from RenderingPath enum
+                //and replaced with a toggle on the camera. If this script aim to be used
+                //on camera too, add it here.
+
                 var renderingPath = (HDAdditionalCameraData.RenderingPath)serialized.renderingPath.intValue;
                 if (renderingPath != HDAdditionalCameraData.RenderingPath.UseGraphicsSettings)
                 {

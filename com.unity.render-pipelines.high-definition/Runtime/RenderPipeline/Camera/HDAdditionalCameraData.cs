@@ -7,19 +7,13 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 {
     [DisallowMultipleComponent, ExecuteAlways]
     [RequireComponent(typeof(Camera))]
-    public class HDAdditionalCameraData : MonoBehaviour, ISerializationCallbackReceiver, IDebugData
+    public partial class HDAdditionalCameraData : MonoBehaviour, ISerializationCallbackReceiver, IDebugData
     {
         public enum FlipYMode
         {
             Automatic,
             ForceFlipY
         }
-
-        [HideInInspector]
-        const int currentVersion = 1;
-
-        [SerializeField, FormerlySerializedAs("version")]
-        int m_Version;
 
         // The light culling use standard projection matrices (non-oblique)
         // If the user overrides the projection matrix with an oblique one
@@ -33,12 +27,10 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         // Default is the default rendering path define by the HDRendeRPipelineAsset FrameSettings.
         // Custom allow users to define the FrameSettigns for this path
         // Then enum can contain either preset of FrameSettings or hard coded path
-        // FullscreenPassthrough below is a hard coded path (a path that can't be implemented only with FrameSettings)
         public enum RenderingPath
         {
             UseGraphicsSettings,
-            Custom,  // Fine grained
-            FullscreenPassthrough  // Hard coded path
+            Custom  // Fine grained
         };
 
         public enum ClearColorMode
@@ -64,11 +56,14 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         public float shutterSpeed = 1f / 200f;
         public float iso = 400f;
         public FlipYMode flipYMode;
+        
+        [Tooltip("This will skip rendering settings to directly rendering in fullscreen (for instance: Useful for video)")]
+        public bool fullscreenPassthrough = false;
 
         // Event used to override HDRP rendering for this particular camera.
         public event Action<ScriptableRenderContext, HDCamera> customRender;
         public bool hasCustomRender { get { return customRender != null; } }
-
+        
         // To be able to turn on/off FrameSettings properties at runtime for debugging purpose without affecting the original one
         // we create a runtime copy (m_ActiveFrameSettings that is used, and any parametrization is done on serialized frameSettings)
         [SerializeField]
@@ -153,7 +148,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 // We do a copy of the settings to those effectively used
                 defaultFrameSettings.CopyTo(m_FrameSettingsRuntime);
 
-                if (renderingPath == RenderingPath.Custom)
+                if (!fullscreenPassthrough && renderingPath == RenderingPath.Custom)
                     m_FrameSettings.ApplyOverrideOn(m_FrameSettingsRuntime);
 
                 m_frameSettingsIsDirty = false;
@@ -246,12 +241,6 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             // When FrameSettings are manipulated or RenderPath change we reset them to reflect the change, discarding all the Debug Windows change.
             // Tag as dirty so frameSettings are correctly initialize at next HDRenderPipeline.Render() call
             m_frameSettingsIsDirty = true;
-
-            if (m_Version != currentVersion)
-            {
-                // Add here data migration code
-                m_Version = currentVersion;
-            }
         }
 
         // This is called at the creation of the HD Additional Camera Data, to convert the legacy camera settings to HD
