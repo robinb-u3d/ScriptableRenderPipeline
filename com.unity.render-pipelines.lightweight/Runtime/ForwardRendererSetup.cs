@@ -16,12 +16,10 @@ namespace UnityEngine.Experimental.Rendering.LWRP
         private BeginXRRenderingPass m_BeginXrRenderingPass;
         private SetupLightweightConstanstPass m_SetupLightweightConstants;
         private RenderOpaqueForwardPass m_RenderOpaqueForwardPass;
-        private CreateColorRenderTexturesPass m_CreatePostOpaqueColorPass;
         private PostProcessPass m_OpaquePostProcessPass;
         private DrawSkyboxPass m_DrawSkyboxPass;
         private CopyDepthPass m_CopyDepthPass;
         private CopyColorPass m_CopyColorPass;
-        private CreateColorRenderTexturesPass m_CreatePostTransparentColorPass;
         private RenderTransparentForwardPass m_RenderTransparentForwardPass;
         private PostProcessPass m_PostProcessPass;
         private CreateColorRenderTexturesPass m_createColorPass;
@@ -63,12 +61,10 @@ namespace UnityEngine.Experimental.Rendering.LWRP
             m_BeginXrRenderingPass = new BeginXRRenderingPass();
             m_SetupLightweightConstants = new SetupLightweightConstanstPass();
             m_RenderOpaqueForwardPass = new RenderOpaqueForwardPass();
-            m_CreatePostOpaqueColorPass = new CreateColorRenderTexturesPass();
             m_OpaquePostProcessPass = new PostProcessPass();
             m_DrawSkyboxPass = new DrawSkyboxPass();
             m_CopyDepthPass = new CopyDepthPass();
             m_CopyColorPass = new CopyColorPass();
-            m_CreatePostTransparentColorPass = new CreateColorRenderTexturesPass();
             m_RenderTransparentForwardPass = new RenderTransparentForwardPass();
             m_PostProcessPass = new PostProcessPass();
             m_FinalBlitPass = new FinalBlitPass();
@@ -227,12 +223,8 @@ namespace UnityEngine.Experimental.Rendering.LWRP
             if (renderingData.cameraData.postProcessEnabled &&
                 renderingData.cameraData.postProcessLayer.HasOpaqueOnlyEffects(renderer.postProcessingContext))
             {
-                m_CreatePostOpaqueColorPass.Setup(baseDescriptor, m_ColorAttachmentAfterOpaquePost, sampleCount);
-                renderer.EnqueuePass(m_CreatePostOpaqueColorPass);
-                m_OpaquePostProcessPass.Setup(baseDescriptor, colorHandle, m_ColorAttachmentAfterOpaquePost, true, false);
+                m_OpaquePostProcessPass.Setup(baseDescriptor, colorHandle, colorHandle, true, false);
                 renderer.EnqueuePass(m_OpaquePostProcessPass);
-
-                colorHandle = m_ColorAttachmentAfterOpaquePost;
 
                 foreach (var pass in m_AfterOpaquePostProcessPasses)
                     renderer.EnqueuePass(pass.GetPassToEnqueue(baseDescriptor, colorHandle, depthHandle));
@@ -240,7 +232,7 @@ namespace UnityEngine.Experimental.Rendering.LWRP
 
             if (camera.clearFlags == CameraClearFlags.Skybox)
             {
-                // We can't combine skybox and render opaques pases if there's a custom render pass in between
+                // We can't combine skybox and render opaques passes if there's a custom render pass in between
                 // them. Ideally we need a render graph here that each render pass declares inputs and output
                 // attachments and their Load/Store action so we figure out properly if we can combine passes
                 // and move to interleaved rendering with RenderPass API. 
@@ -285,13 +277,8 @@ namespace UnityEngine.Experimental.Rendering.LWRP
                 // perform post with src / dest the same
                 if (renderingData.cameraData.postProcessEnabled)
                 {
-                    m_CreatePostTransparentColorPass.Setup(baseDescriptor, m_ColorAttachmentAfterTransparentPost, sampleCount);
-                    renderer.EnqueuePass(m_CreatePostTransparentColorPass);
-
-                    m_PostProcessPass.Setup(baseDescriptor, colorHandle, m_ColorAttachmentAfterTransparentPost, false, false);
+                    m_PostProcessPass.Setup(baseDescriptor, colorHandle, colorHandle, false, false);
                     renderer.EnqueuePass(m_PostProcessPass);
-
-                    colorHandle = m_ColorAttachmentAfterTransparentPost;
                 }
 
                 //execute after passes
