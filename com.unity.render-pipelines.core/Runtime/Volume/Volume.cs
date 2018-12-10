@@ -17,12 +17,9 @@ namespace UnityEngine.Rendering
         [Range(0f, 1f), Tooltip("Total weight of this volume in the scene. 0 means it won't do anything, 1 means full effect.")]
         public float weight = 1f;
         
-        // This is used to change the sharedProfile set at creation of Volume
-        public static VolumeProfile defaultVolumeProfile = null;
-
         // Modifying sharedProfile will change the behavior of all volumes using this profile, and
         // change profile settings that are stored in the project too
-        public VolumeProfile sharedProfile = defaultVolumeProfile;
+        public VolumeProfile sharedProfile = null;
 
         // This property automatically instantiates the profile and makes it unique to this volume
         // so you can safely edit it via scripting at runtime without changing the original asset
