@@ -1,13 +1,10 @@
-using UnityEditor;
 using UnityEngine;
 using System;
 using System.Linq.Expressions;
 using System.Reflection;
 using UnityEngine.Experimental.Rendering.HDPipeline;
 using UnityEngine.Rendering;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Collections.Generic;
+using UnityEngine.Rendering.PostProcessing;
 
 namespace UnityEditor.Experimental.Rendering.HDPipeline
 {
@@ -26,7 +23,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
         {
             public static readonly GUIContent hdrpProjectSettingsPath = EditorGUIUtility.TrTextContent("Default Resources Folder");
             public static readonly GUIContent firstTimeInit = EditorGUIUtility.TrTextContent("Populate / Reset");
-            public static readonly GUIContent defaultVolumeProfile = EditorGUIUtility.TrTextContent("Default Volume Profile", "Shared Volume Profile assigned on new created Volumes.");
+            public static readonly GUIContent defaultScene = EditorGUIUtility.TrTextContent("Default Scene Prefab", "Shared Volume Profile assigned on new created Volumes.");
             public static readonly GUIContent haveStartPopup = EditorGUIUtility.TrTextContent("Show on start");
 
             //configuration debugger
@@ -177,12 +174,6 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             WizardBehaviour();
         }
 
-        [InitializeOnLoadMethod, Callbacks.DidReloadScripts]
-        static void InitializeVolume()
-        {
-            Volume.defaultVolumeProfile = HDProjectSettings.defaultVolumeProfile;
-        }
-
         [MenuItem("Window/Analysis/HDRP Wizard", priority = 113)]
         static void OpenWindow()
         {
@@ -198,6 +189,11 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             else
             {
                 EditorApplication.update -= OpenWindowDelayed;
+
+                //Application.isPlaying cannot be called in constructor. Do it here
+                if (Application.isPlaying)
+                    return;
+
                 OpenWindow();
             }
         }
@@ -211,14 +207,11 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
         }
         
         static void WizardBehaviour()
-        {
-            if (Application.isPlaying)
-                return;
-            
+        {            
             if (HDProjectSettings.hasStartPopup)
             {
                 //We need to wait at least one frame or the popup will not show up
-                frameToWait = 1;
+                frameToWait = 10;
                 EditorApplication.update += OpenWindowDelayed;
             }
         }
@@ -241,35 +234,47 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 var hdrpAsset = ScriptableObject.CreateInstance<HDRenderPipelineAsset>();
                 hdrpAsset.name = "HDRenderPipelineAsset";
 
+                string defaultScenePath = "Assets/" + HDProjectSettings.projectSettingsFolderPath + "/" + hdrpAsset.renderPipelineEditorResources.defaultScene.name + ".asset";
+                AssetDatabase.CopyAsset(AssetDatabase.GetAssetPath(hdrpAsset.renderPipelineEditorResources.defaultScene), defaultScenePath);
                 string defaultVolumeProfilePath = "Assets/" + HDProjectSettings.projectSettingsFolderPath + "/" + hdrpAsset.renderPipelineEditorResources.defaultVolumeProfile.name + ".asset";
                 AssetDatabase.CopyAsset(AssetDatabase.GetAssetPath(hdrpAsset.renderPipelineEditorResources.defaultVolumeProfile), defaultVolumeProfilePath);
                 string defaultDiffusionProfileSettingsPath = "Assets/" + HDProjectSettings.projectSettingsFolderPath + "/" + hdrpAsset.renderPipelineEditorResources.defaultDiffusionProfileSettings.name + ".asset";
                 AssetDatabase.CopyAsset(AssetDatabase.GetAssetPath(hdrpAsset.renderPipelineEditorResources.defaultDiffusionProfileSettings), defaultDiffusionProfileSettingsPath);
-                AssetDatabase.Refresh();
-                
-                HDProjectSettings.defaultVolumeProfile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(defaultVolumeProfilePath);
+                string defaultPostProcessProfilePath = "Assets/" + HDProjectSettings.projectSettingsFolderPath + "/" + hdrpAsset.renderPipelineEditorResources.defaultPostProcessProfile.name + ".asset";
+                AssetDatabase.CopyAsset(AssetDatabase.GetAssetPath(hdrpAsset.renderPipelineEditorResources.defaultPostProcessProfile), defaultPostProcessProfilePath);
+                //AssetDatabase.Refresh();
 
-                var defaultDiffusionProfile = AssetDatabase.LoadAssetAtPath<DiffusionProfileSettings>(defaultDiffusionProfileSettingsPath);
+                GameObject defaultScene = AssetDatabase.LoadAssetAtPath<GameObject>(defaultScenePath);
+                VolumeProfile defaultVolumeProfile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(defaultVolumeProfilePath);
+                PostProcessProfile defaultPostProcessProfile = AssetDatabase.LoadAssetAtPath<PostProcessProfile>(defaultPostProcessProfilePath);
+                DiffusionProfileSettings defaultDiffusionProfile = AssetDatabase.LoadAssetAtPath<DiffusionProfileSettings>(defaultDiffusionProfileSettingsPath);
+
+                foreach (var volume in defaultScene.GetComponentsInChildren<Volume>())
+                    volume.sharedProfile = defaultVolumeProfile;
+                foreach (var postProcessVolume in defaultScene.GetComponentsInChildren<PostProcessVolume>())
+                    postProcessVolume.sharedProfile = defaultPostProcessProfile;
+                HDProjectSettings.defaultScenePrefab = defaultScene;
+                
                 hdrpAsset.diffusionProfileSettings = defaultDiffusionProfile;
 
                 AssetDatabase.CreateAsset(hdrpAsset, "Assets/" + HDProjectSettings.projectSettingsFolderPath + "/" + hdrpAsset.name + ".asset");
-                AssetDatabase.SaveAssets();
-                AssetDatabase.Refresh();
 
                 GraphicsSettings.renderPipelineAsset = hdrpAsset;
                 if (!IsHdrpAssetRuntimeResourcesCorrect())
                     FixHdrpAssetRuntimeResources();
                 if (!IsHdrpAssetEditorResourcesCorrect())
                     FixHdrpAssetEditorResources();
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
             }
             GUILayout.EndHorizontal();
 
             EditorGUI.BeginChangeCheck();
-            VolumeProfile changedVolumeProfile = EditorGUILayout.ObjectField(Style.defaultVolumeProfile, HDProjectSettings.defaultVolumeProfile, typeof(VolumeProfile), allowSceneObjects: false) as VolumeProfile;
+            GameObject changedDefaultScene = EditorGUILayout.ObjectField(Style.defaultScene, HDProjectSettings.defaultScenePrefab, typeof(GameObject), allowSceneObjects: false) as GameObject;
             if (EditorGUI.EndChangeCheck())
             {
-                HDProjectSettings.defaultVolumeProfile = changedVolumeProfile;
-                InitializeVolume();
+                //only affect on change as it will write the guid on disk
+                HDProjectSettings.defaultScenePrefab = changedDefaultScene;
             }
 
             EditorGUILayout.Space();
@@ -286,7 +291,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             GUILayout.EndScrollView();
 
             // check assignation resolution from Selector
-            ObjectSelector.CheckAssignationEvent<VolumeProfile>(x => HDProjectSettings.defaultVolumeProfile = x);
+            ObjectSelector.CheckAssignationEvent<GameObject>(x => HDProjectSettings.defaultScenePrefab = x);
             ObjectSelector.CheckAssignationEvent<HDRenderPipelineAsset>(x => GraphicsSettings.renderPipelineAsset = x);
             ObjectSelector.CheckAssignationEvent<DiffusionProfileSettings>(x =>
             {
@@ -318,7 +323,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             DrawConfigInfoLine(Style.hdrpAssetEditorResourcesLabel, Style.hdrpAssetEditorResourcesError, Style.ok, Style.resolve, IsHdrpAssetEditorResourcesCorrect, FixHdrpAssetEditorResources);
             DrawConfigInfoLine(Style.hdrpAssetDiffusionProfileLabel, Style.hdrpAssetDiffusionProfileError, Style.ok, Style.resolve, IsHdrpAssetDiffusionProfileCorrect, FixHdrpAssetDiffusionProfile);
             --EditorGUI.indentLevel;
-            DrawConfigInfoLine(Style.defaultVolumeProfileLabel, Style.defaultVolumeProfileError, Style.ok, Style.resolve, IsDefaultVolumeProfileCorrect, FixDefaultVolumeProfile);
+            DrawConfigInfoLine(Style.defaultVolumeProfileLabel, Style.defaultVolumeProfileError, Style.ok, Style.resolve, IsDefaultSceneCorrect, FixDefaultScene);
             --EditorGUI.indentLevel;
         }
 
@@ -396,7 +401,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             && IsShadowmaskCorrect()
             && IsColorSpaceCorrect()
             && IsHdrpAssetCorrect()
-            && IsDefaultVolumeProfileCorrect();
+            && IsDefaultSceneCorrect();
         void FixAll()
         {
             if (!IsScriptRuntimeVersionCorrect())
@@ -411,8 +416,8 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 FixShadowmask();
             if (!IsHdrpAssetCorrect())
                 FixHdrpAsset();
-            if (!IsDefaultVolumeProfileCorrect())
-                FixDefaultVolumeProfile();
+            if (!IsDefaultSceneCorrect())
+                FixDefaultScene();
         }
 
         bool IsHdrpAssetCorrect() =>
@@ -523,8 +528,8 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             CreateOrLoad<DiffusionProfileSettings>();
         }
 
-        bool IsDefaultVolumeProfileCorrect() => HDProjectSettings.defaultVolumeProfile != null;
-        void FixDefaultVolumeProfile() => ObjectSelector.Show(HDProjectSettings.defaultVolumeProfile, typeof(VolumeProfile));
+        bool IsDefaultSceneCorrect() => HDProjectSettings.defaultScenePrefab != null;
+        void FixDefaultScene() => ObjectSelector.Show(HDProjectSettings.defaultScenePrefab, typeof(GameObject));
     }
 }
 

@@ -1,4 +1,3 @@
-using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEditor.SceneManagement;
@@ -40,7 +39,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
 
         static void NewSceneCreated(Scene scene, NewSceneSetup setup, NewSceneMode mode)
         {
-            if (!InHDRP())
+            if (!InHDRP() || HDProjectSettings.defaultScenePrefab == null)
                 return; // do not interfere outside of hdrp
 
             if (setup == NewSceneSetup.DefaultGameObjects)
@@ -49,8 +48,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 FillScene(scene);
             }
         }
-
-
+        
         [MenuItem("File/New Empty Scene", true, 148)]
         [MenuItem("File/New Empty Scene Additive", true, 149)]
         [MenuItem("Assets/Create/Empty Scene", true, 200)]
@@ -137,16 +135,10 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 return;
             }
 
-            GameObject root = GameObject.Instantiate(hdrpAsset.renderPipelineEditorResources.defaultScene);
+            GameObject root = GameObject.Instantiate(HDProjectSettings.defaultScenePrefab);
             SceneManager.MoveGameObjectToScene(root, scene);
             root.transform.DetachChildren();
             GameObject.DestroyImmediate(root);
-
-            //use default defined postprocess in scene instanciated by prefab
-            foreach (var volume in GameObject.FindObjectsOfType<Volume>())
-            {
-                volume.sharedProfile = HDProjectSettings.defaultVolumeProfile;
-            }
         }
     }
 }

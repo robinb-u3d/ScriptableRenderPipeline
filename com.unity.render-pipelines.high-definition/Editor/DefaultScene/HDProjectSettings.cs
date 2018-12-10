@@ -5,25 +5,8 @@ using UnityEngine.Rendering;
 
 namespace UnityEditor.Experimental.Rendering.HDPipeline
 {
-    //should have been as simple as
-    // [FilePathAttribute("ProjectSettings/HDProjectSettings.asset", FilePathAttribute.Location.ProjectFolder)]
-    // HDProjectSettings : ScriptableSingleton<HDProjectSettings>
-    // {
-    //     //preparing to eventual migration later
-    //     enum Version
-    //     {
-    //         None,
-    //         First
-    //     }
-    //     [SerializeField]
-    //     Version version = Version.First;
-    // 
-    //     public string defaultVolumeRenderingSettingsPath;
-    //     public string defaultPostProcessSettingsPath;
-    // }
-    //but for unknown reason FilePathAttribute is internal which lead to have an
-    //unusable ScriptableSingleton class. Copying mechanism here...
-
+    //As ScriptableSingleton is not usable due to internal FilePathAttribute,
+    //copying mechanism here
     internal class HDProjectSettings : ScriptableObject
     {
         const string filePath = "ProjectSettings/HDRPProjectSettings.asset";
@@ -40,20 +23,18 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
 #pragma warning restore 414
 
         [SerializeField]
-        string m_DefaultVolumeRenderingSettingsPath;
+        GameObject m_DefaultScenePrefabSaved;
         [SerializeField]
         string m_ProjectSettingFolderPath = "HDRPDefaultResources";
         [SerializeField]
         bool m_PopupAtStart = true;
 
-        static VolumeProfile m_DefaultVolumeProfile;
-
-        public static VolumeProfile defaultVolumeProfile
+        public static GameObject defaultScenePrefab
         {
-            get => m_DefaultVolumeProfile ?? (m_DefaultVolumeProfile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(instance.m_DefaultVolumeRenderingSettingsPath));
+            get => instance.m_DefaultScenePrefabSaved;
             set
             {
-                instance.m_DefaultVolumeRenderingSettingsPath = AssetDatabase.GetAssetPath(m_DefaultVolumeProfile = value);
+                instance.m_DefaultScenePrefabSaved = value;
                 Save();
             }
         }
