@@ -6,11 +6,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [5.3.0] - 2018-11-xx
 ### Changed
-- LWRP now uses non-square shadowmap texture when rendering directional shadows with 2 shadow cascades. 
-- LWRP now uses ARGB2101010 as HDR format in mobile when this format is supported.
+- LWRP now uses non-square shadowmap textures when rendering directional shadows with 2 shadow cascades. 
+- LWRP now uses ARGB2101010 as the HDR format on mobile devices, when this format is supported.
 
 ### Fixed
-- Several tweaks to reduce bandwidth consumption on mobile.
+- Several tweaks to reduce bandwidth consumption on mobile devices.
 - Fixed a typo in ERROR_ON_UNSUPPORTED_FUNCTION() that was causing the shader compiler to run out of memory in GLES2. [Case 1104271] (https://issuetracker.unity3d.com/issues/mobile-os-restarts-because-of-high-memory-usage-when-compiling-shaders-for-opengles2)
 
 ## [5.2.0] - 2018-11-27
