@@ -68,7 +68,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             }
         }
 
-        public static bool haveStartPopup
+        public static bool hasStartPopup
         {
             get => instance.m_PopupAtStart;
             set

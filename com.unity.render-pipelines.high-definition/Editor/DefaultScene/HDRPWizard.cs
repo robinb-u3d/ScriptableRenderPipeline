@@ -11,6 +11,7 @@ using System.Collections.Generic;
 
 namespace UnityEditor.Experimental.Rendering.HDPipeline
 {
+    [InitializeOnLoad]
     public class HDWizard : EditorWindow
     {
         //reflect internal legacy enum
@@ -172,6 +173,8 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             var setLightmapEncodingQualityForPlatformGroupLambda = Expression.Lambda<Action<BuildTargetGroup, LightmapEncodingQualityCopy>>(setLightmapEncodingQualityForPlatformGroupBlock, buildTargetGroupParameter, qualityParameter);
             GetLightmapEncodingQualityForPlatformGroup = getLightmapEncodingQualityForPlatformGroupLambda.Compile();
             SetLightmapEncodingQualityForPlatformGroup = setLightmapEncodingQualityForPlatformGroupLambda.Compile();
+
+            WizardBehaviour();
         }
 
         [InitializeOnLoadMethod, Callbacks.DidReloadScripts]
@@ -183,9 +186,43 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
         [MenuItem("Window/Analysis/HDRP Wizard", priority = 113)]
         static void OpenWindow()
         {
-            var window = GetWindow<HDWizard>("HDRP Wizard");
+            GetWindow<HDWizard>("HDRP Wizard");
         }
 
+        static int frameToWait;
+
+        static void OpenWindowDelayed()
+        {
+            if (frameToWait > 0)
+                --frameToWait;
+            else
+            {
+                EditorApplication.update -= OpenWindowDelayed;
+                OpenWindow();
+            }
+        }
+
+        [Callbacks.DidReloadScripts]
+        static void ResetDelayed()
+        {
+            //remove it from domain reload but keep it in editor opening
+            frameToWait = 0;
+            EditorApplication.update -= OpenWindowDelayed;
+        }
+        
+        static void WizardBehaviour()
+        {
+            if (Application.isPlaying)
+                return;
+            
+            if (HDProjectSettings.hasStartPopup)
+            {
+                //We need to wait at least one frame or the popup will not show up
+                frameToWait = 1;
+                EditorApplication.update += OpenWindowDelayed;
+            }
+        }
+        
         void OnGUI()
         {
             scrollPos = GUILayout.BeginScrollView(scrollPos);
@@ -240,10 +277,10 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             
             GUILayout.FlexibleSpace();
             EditorGUI.BeginChangeCheck();
-            bool changedHaveStatPopup = EditorGUILayout.Toggle(Style.haveStartPopup, HDProjectSettings.haveStartPopup);
+            bool changedHasStatPopup = EditorGUILayout.Toggle(Style.haveStartPopup, HDProjectSettings.hasStartPopup);
             if (EditorGUI.EndChangeCheck())
             {
-                HDProjectSettings.haveStartPopup = changedHaveStatPopup;
+                HDProjectSettings.hasStartPopup = changedHasStatPopup;
             }
 
             GUILayout.EndScrollView();
