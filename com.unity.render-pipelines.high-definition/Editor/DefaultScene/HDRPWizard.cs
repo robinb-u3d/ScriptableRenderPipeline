@@ -174,10 +174,10 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             WizardBehaviour();
         }
 
-        [MenuItem("Window/Analysis/HDRP Wizard", priority = 113)]
+        [MenuItem("Window/Analysis/Render Pipeline Wizard", priority = 113)]
         static void OpenWindow()
         {
-            GetWindow<HDWizard>("HDRP Wizard");
+            GetWindow<HDWizard>("Render Pipeline Wizard");
         }
 
         static int frameToWait;
