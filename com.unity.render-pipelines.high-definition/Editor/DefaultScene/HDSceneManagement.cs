@@ -48,26 +48,49 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 FillScene(scene);
             }
         }
-        
-        [MenuItem("File/New Empty Scene", true, 148)]
-        [MenuItem("File/New Empty Scene Additive", true, 149)]
-        [MenuItem("Assets/Create/Empty Scene", true, 200)]
+
+        // Note: Currently we do not add Empty scene in the HDRP package.
+        // But if you need it for personal use, you can uncomment the following (1/2):
+
+        //[MenuItem("File/New Empty Scene", true, 148)]
+        //[MenuItem("File/New Empty Scene Additive", true, 149)]
+        //[MenuItem("Assets/Create/Empty Scene", true, 199)]
+        [MenuItem("Assets/Create/HD Template Scene", true, 200)]
         static bool InHDRP()
         {
             return GraphicsSettings.renderPipelineAsset is HDRenderPipelineAsset;
         }
 
-        [MenuItem("File/New Empty Scene", false, 148)]
-        static void CreateEmptyScene()
-        {
-            if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
-                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);
-        }
+        // Note: Currently we do not add Empty scene in the HDRP package.
+        // But if you need it for personal use, you can uncomment the following (2/2):
 
-        [MenuItem("File/New Empty Scene Additive", false, 149)]
-        static void CreateEmptySceneAdditive()
+        //[MenuItem("File/New Empty Scene", false, 148)]
+        //static void CreateEmptyScene()
+        //{
+        //    if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+        //        EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);
+        //}
+
+        //[MenuItem("File/New Empty Scene Additive", false, 149)]
+        //static void CreateEmptySceneAdditive()
+        //{
+        //    EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        //}
+
+        //[MenuItem("Assets/Create/Empty Scene", false, 199)]
+        //static void CreateEmptySceneAsset()
+        //{
+        //    //cannot use ProjectWindowUtil.CreateScene() as it will fill the scene with Default
+        //    var icon = EditorGUIUtility.FindTexture("SceneAsset Icon");
+        //    ProjectWindowUtil.StartNameEditingIfProjectWindowExists(0, ScriptableObject.CreateInstance<DoCreateEmptyScene>(), "New Scene.unity", icon, null);
+        //}
+
+        [MenuItem("Assets/Create/HD Template Scene", false, 200)]
+        static void CreateHDSceneAsset()
         {
-            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+            //cannot use ProjectWindowUtil.CreateScene() as it will fill the scene with Default
+            var icon = EditorGUIUtility.FindTexture("SceneAsset Icon");
+            ProjectWindowUtil.StartNameEditingIfProjectWindowExists(0, ScriptableObject.CreateInstance<DoCreateTemplateScene>(), "New Scene.unity", icon, null);
         }
 
         class DoCreateEmptyScene : UnityEditor.ProjectWindowCallback.EndNameEditAction
@@ -81,6 +104,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 }
             }
         }
+
         class DoCreateTemplateScene : UnityEditor.ProjectWindowCallback.EndNameEditAction
         {
             public override void Action(int instanceId, string pathName, string resourceFile)
@@ -96,22 +120,6 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                     EditorSceneManager.CloseScene(scene, true);
                 }
             }
-        }
-
-        [MenuItem("Assets/Create/Empty Scene", false, 199)]
-        static void CreateEmptySceneAsset()
-        {
-            //cannot use ProjectWindowUtil.CreateScene() as it will fill the scene with Default
-            var icon = EditorGUIUtility.FindTexture("SceneAsset Icon");
-            ProjectWindowUtil.StartNameEditingIfProjectWindowExists(0, ScriptableObject.CreateInstance<DoCreateEmptyScene>(), "New Scene.unity", icon, null);
-        }
-
-        [MenuItem("Assets/Create/HD Template Scene", false, 200)]
-        static void CreateHDSceneAsset()
-        {
-            //cannot use ProjectWindowUtil.CreateScene() as it will fill the scene with Default
-            var icon = EditorGUIUtility.FindTexture("SceneAsset Icon");
-            ProjectWindowUtil.StartNameEditingIfProjectWindowExists(0, ScriptableObject.CreateInstance<DoCreateTemplateScene>(), "New Scene.unity", icon, null);
         }
 
         static void ClearScene(Scene scene)
