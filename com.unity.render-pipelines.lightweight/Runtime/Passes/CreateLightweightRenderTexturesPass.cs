@@ -48,11 +48,7 @@ namespace UnityEngine.Experimental.Rendering.LWRP
                 bool useDepthRenderBuffer = depthAttachmentHandle == RenderTargetHandle.CameraTarget;
                 var colorDescriptor = descriptor;
                 colorDescriptor.depthBufferBits = (useDepthRenderBuffer) ? k_DepthStencilBufferBits : 0;
-                colorDescriptor.sRGB = true;
-                colorDescriptor.msaaSamples = (int)samples;
                 cmd.GetTemporaryRT(colorAttachmentHandle.id, colorDescriptor, FilterMode.Bilinear);
-                SetRenderTarget(cmd, colorAttachmentHandle.Identifier(), RenderBufferLoadAction.DontCare, RenderBufferStoreAction.DontCare,
-                        ClearFlag.None, Color.clear, descriptor.dimension);
             }
 
             if (depthAttachmentHandle != RenderTargetHandle.CameraTarget)
@@ -60,7 +56,6 @@ namespace UnityEngine.Experimental.Rendering.LWRP
                 var depthDescriptor = descriptor;
                 depthDescriptor.colorFormat = RenderTextureFormat.Depth;
                 depthDescriptor.depthBufferBits = k_DepthStencilBufferBits;
-                depthDescriptor.msaaSamples = (int)samples;
                 depthDescriptor.bindMS = (int)samples > 1 && !SystemInfo.supportsMultisampleAutoResolve && (SystemInfo.supportsMultisampledTextures!=0);
                 cmd.GetTemporaryRT(depthAttachmentHandle.id, depthDescriptor, FilterMode.Point);
             }

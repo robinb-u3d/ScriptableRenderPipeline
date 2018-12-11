@@ -306,13 +306,13 @@ namespace UnityEngine.Experimental.Rendering.LWRP
              SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.ARGB2101010);
             RenderTextureFormat hdrFormat = (useRGB10A2) ? RenderTextureFormat.ARGB2101010 : RenderTextureFormat.DefaultHDR;
             desc.colorFormat = cameraData.isHdrEnabled ? hdrFormat : RenderTextureFormat.Default;
-
-            desc.enableRandomWrite = false;
-            desc.sRGB = true;
             desc.width = (int)((float)desc.width * renderScale * scaler);
             desc.height = (int)((float)desc.height * renderScale * scaler);
+            desc.enableRandomWrite = false;
+            desc.sRGB = true;
             desc.msaaSamples = cameraData.msaaSamples;
-            desc.colorFormat = 0;
+            desc.depthBufferBits = 32;
+            desc.bindMS = false;
             return desc;
         }
 

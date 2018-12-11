@@ -41,7 +41,6 @@ namespace UnityEngine.Experimental.Rendering.LWRP
             baseDescriptor.depthBufferBits = kDepthBufferBits;
 
             // Depth-Only pass don't use MSAA
-            baseDescriptor.bindMS = false;
             baseDescriptor.msaaSamples = 1;
             
             descriptor = baseDescriptor;
