@@ -27,7 +27,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
         [SerializeField]
         string m_ProjectSettingFolderPath = "HDRPDefaultResources";
         [SerializeField]
-        bool m_PopupAtStart = true;
+        bool m_PopupAtStart = false;
 
         public static GameObject defaultScenePrefab
         {
