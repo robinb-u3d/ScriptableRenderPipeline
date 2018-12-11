@@ -44,7 +44,7 @@
 #define INTRINSIC_WAVE_LOGICAL_OPS
 #define WaveActiveBitAnd __XB_WaveAND
 #define WaveActiveBitOr __XB_WaveOR
-
+#define WaveGetID __XB_GetWaveID
 
 #define INTRINSIC_BITFIELD_EXTRACT
 uint BitFieldExtract(uint data, uint offset, uint numBits)
@@ -77,11 +77,6 @@ uint WaveGetLaneIndex()
 bool WaveIsFirstLane()
 {
     return (__XB_MBCNT64(WaveActiveBallot(true))) == 0;
-}
-
-uint GetWaveID()
-{
-    return __XB_GetWaveID();
 }
 
 #define INTRINSIC_MINMAX3
