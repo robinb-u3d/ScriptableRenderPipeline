@@ -60,7 +60,9 @@ Shader "Hidden/LightweightPipeline/CameraMotionVectors"
                 float depth = LOAD_TEXTURE2D(_CameraDepthTexture, i.position.xy).x;
 
                 float2 screenSize = float2(1 / _ScaledScreenParams.x, 1 / _ScaledScreenParams.y);
-                PositionInputs posInput = GetPositionInput(i.position.xy, screenSize, depth, UNITY_MATRIX_I_VP, UNITY_MATRIX_V);
+                int eye = 0;
+
+                PositionInputs posInput = GetPositionInput_Stereo(i.position.xy, screenSize, depth, UNITY_MATRIX_I_VP, UNITY_MATRIX_V, unity_StereoEyeIndex);
 
                 float4 worldPos = float4(posInput.positionWS, 1.0);
                 float4 prevPos = worldPos;
@@ -79,7 +81,7 @@ Shader "Hidden/LightweightPipeline/CameraMotionVectors"
                 // Convert velocity from Clip space (-1..1) to NDC 0..1 space
                 // Note it doesn't mean we don't have negative value, we store negative or positive offset in NDC space.
                 // Note: ((positionCS * 0.5 + 0.5) - (previousPositionCS * 0.5 + 0.5)) = (velocity * 0.5)
-                velocity.xy * 0.5;
+                velocity = velocity.xy * 0.5;
                 return float4(velocity.xy, 0, 0);
             }
 

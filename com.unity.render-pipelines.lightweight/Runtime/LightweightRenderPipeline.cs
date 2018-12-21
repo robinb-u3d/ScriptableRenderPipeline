@@ -8,6 +8,7 @@ using UnityEditor.Experimental.Rendering.LightweightPipeline;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.PostProcessing;
 using UnityEngine.Experimental.GlobalIllumination;
+using UnityEngine.XR;
 using Lightmapping = UnityEngine.Experimental.GlobalIllumination.Lightmapping;
 
 namespace UnityEngine.Experimental.Rendering.LightweightPipeline
@@ -344,7 +345,7 @@ namespace UnityEngine.Experimental.Rendering.LightweightPipeline
             {
                 var nonJitteredCameraProj = camera.GetStereoProjectionMatrix(eye);
                 var cameraProj = taaEnabled
-                    ? postProcessLayer.temporalAntialiasing.GetStereoJitteredProjectionMatrix(camera.pixelWidth, camera.pixelHeight, camera, eye) // TODO: This is wrong as we should use the XRSettings eye texture width and height as double wide will effect the cmera pixel width.
+                    ? postProcessLayer.temporalAntialiasing.GetStereoJitteredProjectionMatrix(XRSettings.eyeTextureWidth, XRSettings.eyeTextureHeight, camera, eye) // TODO: This is wrong as we should use the XRSettings eye texture width and height as double wide will effect the cmera pixel width.
                     : nonJitteredCameraProj;
 
                 var gpuProj = GL.GetGPUProjectionMatrix(cameraProj, true); // Had to change this from 'false'

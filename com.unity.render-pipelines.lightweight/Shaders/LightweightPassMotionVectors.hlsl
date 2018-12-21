@@ -70,7 +70,8 @@ half4 MotionVectorsFragment(Varyings IN) : SV_Target
     // Convert from Clip space (-1..1) to NDC 0..1 space.
     // Note it doesn't mean we don't have negative value, we store negative or positive offset in NDC space.
     // Note: ((positionCS * 0.5 + 0.5) - (previousPositionCS * 0.5 + 0.5)) = (velocity * 0.5)
-    velocity.xy * 0.5;
+
+    velocity = velocity.xy * 0.5;
 
 #ifdef SHADER_API_MOBILE
     velocity.xy *= unity_MotionVectorsParams.y;
